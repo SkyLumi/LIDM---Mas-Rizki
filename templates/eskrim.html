@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tangkap Rasa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        /* Kontainer untuk setiap "layar" */
+        .screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s;
+        }
+        .hidden { display: none; }
+        #gameCanvas { width: 100%; height: 100%; object-fit: cover; }
+        .loader {
+            border: 8px solid #f3f3f3; border-top: 8px solid #3498db;
+            border-radius: 50%; width: 60px; height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    <!-- Import MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <!-- ======================== -->
+    <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
+    <!-- ======================== -->
+    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='eskrim_img/mainMenuPage.png') }}');">
+        <div class="relative w-full h-full flex items-center justify-center">
+            
+            <!-- Panel Menu Utama -->
+            <!-- TAMBAHKAN 'relative' DI SINI untuk menjadi acuan posisi tombol -->
+            <div class="relative w-full max-w-8xl flex flex-col items-center">
+                <img src="{{ url_for('static', filename='eskrim_img/titlebox.png') }}" alt="Menu Utama" class="w-10/12 z-10">
+
+                <!-- Kontainer Tombol-Tombol -->
+                <!-- GANTI class positioningnya dengan 'absolute' -->
+                <div class="absolute bottom-12 md:bottom-8 left-0 right-0 flex justify-center gap-4 w-full z-20">
+                    <button id="play-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='eskrim_img/playButton.png') }}" alt="Play" class="pointer-events-none">
+                    </button>
+                    <button id="settings-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='eskrim_img/pengaturanButton.png') }}" alt="Pengaturan" class="pointer-events-none">
+                    </button>
+                    <button id="quit-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='eskrim_img/keluarButton.png') }}" alt="Keluar" class="pointer-events-none">
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ======================== -->
+    <!--   LAYAR 1.5: PILIH LEVEL  -->
+    <!-- ======================== -->
+    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='eskrim_img/backgroundLevelMenu.png') }}');">
+        
+        <!-- Wrapper 'relative' yang mengisi seluruh layar untuk menjadi acuan posisi absolut -->
+        <div class="relative w-full h-full">
+            
+            <!-- Box Level, diposisikan absolut di atas-tengah. Jarak dari atas diubah jadi 15% -->
+            <div class="absolute left-1/2 -translate-x-1/2 w-10/12 max-w-2xl">
+                <img src="{{ url_for('static', filename='eskrim_img/levelbox.png') }}" alt="Pilih Level Box" class="w-full">
+                
+                <!-- Container Tombol Level, dibuat 'absolute' agar menimpa gambar box -->
+                <div class="absolute inset-0 flex justify-center items-end gap-6 lg:pb-40">
+                    <button id="level-1-btn" class="transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='eskrim_img/level1btn.png') }}" alt="Level 1" class="w-24 md:w-32">
+                    </button>
+                    <button id="level-2-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='eskrim_img/levelLockedbtn.png') }}" alt="Level 2 Locked" class="w-24 md:w-32 opacity-50">
+                    </button>
+                    <button id="level-3-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='eskrim_img/levelLockedbtn.png') }}" alt="Level 3 Locked" class="w-24 md:w-32 opacity-50">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <!-- ======================== -->
+    <!--     LAYAR 2: COUNTDOWN     -->
+    <!-- ======================== -->
+    <div id="countdown-screen" class="screen hidden bg-black">
+        <div class="w-full h-full flex items-center justify-center">
+            <img id="countdown-image" src="" alt="Countdown" class="max-w-md max-h-md object-contain">
+        </div>
+    </div>
+
+    <!-- ======================== -->
+    <!--     LAYAR 3: GAMEPLAY      -->
+    <!-- ======================== -->
+    <div id="game-screen" class="screen hidden bg-black">
+        <div id="loading-container" class="flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow-lg">
+            <div class="loader"></div>
+            <p id="loading-text" class="mt-4 text-gray-700 font-semibold">Menunggu akses kamera...</p>
+        </div>
+        <div id="game-wrapper" class="w-full h-full hidden">
+            <button id="exit-game-btn" class="absolute top-4 left-4 z-10 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm">
+                &larr; Keluar
+            </button>
+            <video id="webcam" class="hidden" autoplay playsinline></video>
+            <canvas id="gameCanvas"></canvas>
+        </div>
+    </div>
+
+
+    <!-- ======================== -->
+    <!--      LOGIKA JAVASCRIPT     -->
+    <!-- ======================== -->
+    <script>
+        // --- MANAJEMEN LAYAR & NAVIGASI ---
+        const menuScreen = document.getElementById('menu-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const levelScreen = document.getElementById('level-screen');
+        const countdownScreen = document.getElementById('countdown-screen');
+        const countdownImage = document.getElementById('countdown-image');
+        const playBtn = document.getElementById('play-btn');
+        const level1Btn = document.getElementById('level-1-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const quitBtn = document.getElementById('quit-btn');
+        const exitGameBtn = document.getElementById('exit-game-btn');
+
+        playBtn.addEventListener('click', () => {
+            menuScreen.classList.add('hidden');
+            levelScreen.classList.remove('hidden');
+        });
+
+        settingsBtn.addEventListener('click', () => {
+            alert('Halaman Pengaturan belum dibuat!');
+        });
+
+        quitBtn.addEventListener('click', () => {
+            alert('Tombol Keluar ditekan!');
+        });
+
+        exitGameBtn.addEventListener('click', () => {
+            stopGame();
+            gameScreen.classList.add('hidden');
+            menuScreen.classList.remove('hidden');
+        });
+
+        level1Btn.addEventListener('click', () => {
+            levelScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            startGame();
+        });
+
+        // --- Variabel & Referensi Game ---
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('gameCanvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const loadingContainer = document.getElementById('loading-container');
+        const loadingText = document.getElementById('loading-text');
+        const gameWrapper = document.getElementById('game-wrapper');
+
+        let score, lives, gameOver, gameStarted, iceCreams, lastSpawnTime, currentConePos, hands, camera, dispenser;
+        let countdownActive = false;
+        let countdownStartTime = 0;
+        let countdownStep = 0; // 0=3, 1=2, 2=1, 3=GO
+        
+        // Game Over Panel Animation Variables
+        let gameOverPanelActive = false;
+        let gameOverAnimationStart = 0;
+        let gameOverPanelY = -900; // Start position (off-screen top) - diperbesar untuk panel yang lebih besar
+        const gameOverTargetY = 0; // Final position - dipindahkan ke atas
+        const gameOverAnimationDuration = 800; // 0.8 seconds
+        
+        const smoothingFactor = 0.3;
+        const spawnRate = 6;
+
+        let coneImage = new Image();
+        coneImage.src = "{{ url_for('static', filename='eskrim_img/cone.png') }}";
+
+        let iceCreamImage = new Image();
+        iceCreamImage.src = "{{ url_for('static', filename='eskrim_img/vanillaFall.png') }}";
+
+        let scorePanelImage = new Image();
+        scorePanelImage.src = "{{ url_for('static', filename='eskrim_img/scorePanel.png') }}";
+
+        let dispenserImage = new Image();
+        dispenserImage.src = "{{ url_for('static', filename='eskrim_img/dispenserArm.png') }}";
+
+        let machineryImage = new Image();
+        machineryImage.src = "{{ url_for('static', filename='eskrim_img/backgroundMesin.png') }}";
+
+        let lifeConeImage = new Image();
+        lifeConeImage.src = "{{ url_for('static', filename='eskrim_img/life-cone-icon.png') }}";
+
+        let boxLife = new Image();
+        boxLife.src = "{{ url_for('static', filename='eskrim_img/boxLife.png') }}";
+
+        // --- Countdown Images ---
+        let countdown3Image = new Image();
+        countdown3Image.src = "{{ url_for('static', filename='eskrim_img/3.png') }}";
+
+        let countdown2Image = new Image();
+        countdown2Image.src = "{{ url_for('static', filename='eskrim_img/2.png') }}";
+
+        let countdown1Image = new Image();
+        countdown1Image.src = "{{ url_for('static', filename='eskrim_img/1.png') }}";
+
+        let countdownGoImage = new Image();
+        countdownGoImage.src = "{{ url_for('static', filename='eskrim_img/GO.png') }}";
+
+        // --- Game Over Panel Images ---
+        let panelBoxImage = new Image();
+        panelBoxImage.src = "{{ url_for('static', filename='eskrim_img/panelBox.png') }}";
+
+        let panelHomeImage = new Image();
+        panelHomeImage.src = "{{ url_for('static', filename='eskrim_img/panelHome.png') }}";
+
+        let panelRestartImage = new Image();
+        panelRestartImage.src = "{{ url_for('static', filename='eskrim_img/panelRestart.png') }}";
+
+        let panelNextLevelImage = new Image();
+        panelNextLevelImage.src = "{{ url_for('static', filename='eskrim_img/panelNextlevel.png') }}";
+
+        let starImage = new Image();
+        starImage.src = "{{ url_for('static', filename='eskrim_img/star.png') }}";
+
+        // --- Fill Ice Cream Bar Image ---
+        let fillIceCreamBarImage = new Image();
+        fillIceCreamBarImage.src = "{{ url_for('static', filename='eskrim_img/Fillicecreambar.png') }}";
+
+
+        // --- Fungsi-fungsi Gambar ---
+        function drawCone(ctx, position) {
+            
+            if (!position) return;
+            const { x, y } = position;
+            
+            const coneWidth = 180;
+            const coneHeight = 200;
+
+            ctx.drawImage(
+                coneImage, 
+                x - coneWidth / 2, 
+                y - coneHeight,
+                coneWidth, 
+                coneHeight
+            );
+        }
+
+        function updateAndDrawDispenser(ctx, w, h) {
+            if (!dispenser) return;
+
+            // === LOGIKA KONDISI (STATE MACHINE) ===
+            switch (dispenser.state) {
+                case 'MOVING':
+                    // Gerakkan dispenser menuju targetX
+                    if (Math.abs(dispenser.x - dispenser.targetX) > dispenser.speed) {
+                        if (dispenser.x < dispenser.targetX) {
+                            dispenser.x += dispenser.speed;
+                        } else {
+                            dispenser.x -= dispenser.speed;
+                        }
+                    } else {
+                        dispenser.x = dispenser.targetX;
+                        dispenser.state = 'DISPENSING'; // Setelah sampai, mulai keluarkan es krim
+                        dispenser.currentFrame = 0; // Mulai animasi dari awal
+                    }
+                    break;
+
+                case 'DISPENSING':
+                    const now = Date.now();
+                    if (now - dispenser.lastFrameTime > dispenser.animationSpeed) {
+                        dispenser.currentFrame++;
+                        dispenser.lastFrameTime = now;
+                    }
+
+                    // Jika animasi sudah di frame terakhir
+                    if (dispenser.currentFrame >= dispenser.frameCount) {
+
+                        const displayHeight = dispenser.frameHeight / 3.5;
+
+                        iceCreams = [];
+                        iceCreams.push({
+                            x: w - dispenser.x + 580, // Posisi X sama dengan dispenser
+                            y: dispenser.y + (displayHeight / 2) - 10, // Posisi Y di bawah dispenser (sesuaikan)
+                            speed: 20,
+                            xSpeed: 0,
+                            // Properti animasi es krim...
+                            currentFrame: 0, frameCount: 5, frameWidth: 150, frameHeight: 200,
+                            animationSpeed: 100, lastFrameTime: Date.now()
+                        });
+                        
+                        dispenser.state = 'IDLE'; // Kembali diam
+                        dispenser.currentFrame = 0; // Reset animasi dispenser
+                    }
+                    break;
+
+                case 'IDLE':
+                    // Biarkan saja, tidak melakukan apa-apa
+                    break;
+            }
+
+            // === LOGIKA MENGGAMBAR DISPENSER ===
+            const sourceY = dispenser.currentFrame * dispenser.frameHeight;
+
+            const displayWidth = dispenser.frameWidth / 3.5;  // Coba perkecil 1.5x dari aslinya
+            const displayHeight = dispenser.frameHeight / 3.5; // Coba perkecil 1.5x dari aslinya
+
+            ctx.save();
+            ctx.scale(-1, 1); // Balik horizontal
+            ctx.translate(-w, 0);
+
+            ctx.drawImage(
+                dispenser.image,
+                0, sourceY,                                     // Ambil frame dari gambar asli
+                dispenser.frameWidth, dispenser.frameHeight,   // Ukuran frame asli (JANGAN DIUBAH)
+                dispenser.x - (displayWidth / 2),              // Posisi X disesuaikan dengan ukuran baru
+                dispenser.y - (displayHeight / 2),             // Posisi Y disesuaikan dengan ukuran baru
+                displayWidth, displayHeight                    // Gambar ke canvas dengan ukuran baru
+            );
+
+            ctx.restore();
+        }
+
+        function drawIceCream(ctx, cream) {
+            if (!cream) return;
+            
+            const sourceX = cream.currentFrame * cream.frameWidth;
+
+            ctx.drawImage(
+                iceCreamImage,
+                sourceX, 0,                      // Posisi X dan Y di gambar sumber (sprite sheet)
+                cream.frameWidth, cream.frameHeight, // Lebar & Tinggi potongan dari sumber
+                cream.x - cream.frameWidth / 2,  // Posisi X di canvas
+                cream.y - cream.frameHeight / 2, // Posisi Y di canvas
+                cream.frameWidth, cream.frameHeight  // Ukuran gambar saat digambar di canvas
+            );
+        }
+        
+        // --- Fungsi-fungsi Game (Start, Stop, Loop, etc.) ---
+        function onResults(results) {
+            if (!gameStarted && videoElement.videoWidth > 0) {
+                canvasElement.width = window.innerWidth;
+                canvasElement.height = window.innerHeight;
+                gameStarted = true;
+                loadingContainer.classList.add('hidden');
+                gameWrapper.classList.remove('hidden');
+                
+                // Start countdown
+                countdownActive = true;
+                countdownStartTime = Date.now();
+                countdownStep = 0;
+            }
+
+            if (!gameStarted) return;
+
+            // Handle countdown
+            if (countdownActive) {
+                const now = Date.now();
+                const elapsed = now - countdownStartTime;
+                
+                if (elapsed >= 1000) { // 1 second per step
+                    countdownStep++;
+                    countdownStartTime = now;
+                    
+                    if (countdownStep >= 4) { // After GO (step 3)
+                        countdownActive = false;
+                        lastSpawnTime = Date.now(); // Reset spawn timer
+                    }
+                }
+                
+                // Draw countdown overlay
+                const w = canvasElement.width;
+                const h = canvasElement.height;
+                
+                canvasCtx.save();
+                canvasCtx.clearRect(0, 0, w, h);
+                
+                // Fullscreen camera dengan aspect ratio yang benar (tidak stretch, tidak flip)
+                const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
+                const canvasRatio = w / h;
+                let drawWidth = w, drawHeight = h;
+                
+                if (videoRatio > canvasRatio) {
+                    // Video lebih lebar, fit ke tinggi canvas
+                    drawHeight = h;
+                    drawWidth = h * videoRatio;
+                } else {
+                    // Video lebih tinggi, fit ke lebar canvas
+                    drawWidth = w;
+                    drawHeight = w / videoRatio;
+                }
+                
+                canvasCtx.drawImage(results.image, (w - drawWidth) / 2, (h - drawHeight) / 2, drawWidth, drawHeight);
+                
+                canvasCtx.restore();
+                
+                // Draw countdown image
+                let countdownImg;
+                switch (countdownStep) {
+                    case 0: countdownImg = countdown3Image; break;
+                    case 1: countdownImg = countdown2Image; break;
+                    case 2: countdownImg = countdown1Image; break;
+                    case 3: countdownImg = countdownGoImage; break;
+                }
+                
+                if (countdownImg && countdownImg.complete) {
+                    // Use original image dimensions to maintain aspect ratio
+                    const imgWidth = countdownImg.naturalWidth;
+                    const imgHeight = countdownImg.naturalHeight;
+                    
+                    // Scale down if image is too large for screen
+                    const maxSize = Math.min(w * 0.4, h * 0.4); // Max 40% of screen size
+                    let displayWidth = imgWidth;
+                    let displayHeight = imgHeight;
+                    
+                    if (imgWidth > maxSize || imgHeight > maxSize) {
+                        const scale = maxSize / Math.max(imgWidth, imgHeight);
+                        displayWidth = imgWidth * scale;
+                        displayHeight = imgHeight * scale;
+                    }
+                    
+                    canvasCtx.drawImage(
+                        countdownImg,
+                        (w - displayWidth) / 2,
+                        (h - displayHeight) / 2,
+                        displayWidth,
+                        displayHeight
+                    );
+                }
+                
+                return; // Don't run game logic during countdown
+            }
+
+            const w = canvasElement.width;
+            const h = canvasElement.height;
+
+            if (dispenser && dispenser.x === null) {
+                dispenser.x = w / 2;
+                dispenser.targetX = w / 2;
+            }
+
+            if (currentConePos === null) {
+                currentConePos = { x: w / 2, y: h - 100 };
+            }
+
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, w, h);
+            
+            // Fullscreen camera dengan aspect ratio yang benar (tidak stretch, tidak flip)
+            const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
+            const canvasRatio = w / h;
+            let drawWidth = w, drawHeight = h;
+            
+            if (videoRatio > canvasRatio) {
+                // Video lebih lebar, fit ke tinggi canvas
+                drawHeight = h;
+                drawWidth = h * videoRatio;
+            } else {
+                // Video lebih tinggi, fit ke lebar canvas
+                drawWidth = w;
+                drawHeight = w / videoRatio;
+            }
+            
+            canvasCtx.drawImage(results.image, (w - drawWidth) / 2, (h - drawHeight) / 2, drawWidth, drawHeight);
+
+            if (!gameOver) {
+                 let targetConePos = { x: w / 2, y: h - 100 };
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    //for (const landmarks of results.multiHandLandmarks) {
+                    //    window.drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS, { color: '#FFFFFF', lineWidth: 5 });
+                    //    window.drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 2 });
+                    //}
+                    if (results.multiHandLandmarks.length === 2) {
+                        const wrist1 = results.multiHandLandmarks[0][0];
+                        const wrist2 = results.multiHandLandmarks[1][0];
+                        targetConePos.x = ((wrist1.x + wrist2.x) / 2) * w;
+                        targetConePos.y = (Math.min(wrist1.y, wrist2.y) * h) - 100;
+                    } else {
+                        const wrist = results.multiHandLandmarks[0][0];
+                        targetConePos.x = wrist.x * w;
+                        targetConePos.y = wrist.y * h;
+                    }
+                }
+                currentConePos.x += (targetConePos.x - currentConePos.x) * smoothingFactor;
+                currentConePos.y += (targetConePos.y - currentConePos.y) * smoothingFactor;
+
+                // 1. Munculkan Es Krim Baru
+                const now = Date.now();
+                if (now - lastSpawnTime > (spawnRate * 1000) && dispenser.state === 'IDLE') {
+                    if (dispenser.direction === 1) { 
+                        const minX = w * 0.6;
+                        const maxX = w * 0.9;
+                        dispenser.targetX = Math.random() * (maxX - minX) + minX;
+
+                    } else {
+                        const minX = w * 0.1;
+                        const maxX = w * 0.4;
+                        dispenser.targetX = Math.random() * (maxX - minX) + minX;
+                    }
+
+                    dispenser.state = 'MOVING';
+                    lastSpawnTime = now;
+                }
+
+                // 2. Gerakkan Es Krim & Deteksi Tabrakan
+                const iceCreamsToKeep = [];
+                for (const cream of iceCreams) {
+                    cream.y += cream.speed;
+                    cream.x += cream.xSpeed;
+
+                    const now = Date.now();
+                    if (now - cream.lastFrameTime > cream.animationSpeed) {
+                        cream.currentFrame = (cream.currentFrame + 1) % cream.frameCount;
+                        cream.lastFrameTime = now;
+                    }
+
+                    if (cream.x < 25 || cream.x > w - 25) {
+                        cream.xSpeed *= -1; // Memantul
+                    }
+
+                    const dist = Math.sqrt(
+                        Math.pow(currentConePos.x - cream.x, 2) +
+                        Math.pow((currentConePos.y - 140) - cream.y, 2)
+                    );
+
+                    if (dist < 80) {
+                        score += 10;
+                    } else if (cream.y > h) {
+                        lives -= 1;
+                    } else {
+                        iceCreamsToKeep.push(cream);
+                    }
+                }
+                iceCreams = iceCreamsToKeep;
+
+                if (lives <= 0) {
+                    gameOver = true;
+                    lives = 0;
+                    // Start game over panel animation
+                    if (!gameOverPanelActive) {
+                        gameOverPanelActive = true;
+                        gameOverAnimationStart = Date.now();
+                        gameOverPanelY = -900; // Reset to start position
+                    }
+                }
+            }
+            
+            const machineryHeight = 100; // Tentukan tinggi background, sesuaikan
+            canvasCtx.drawImage(machineryImage, 0, 0, w, machineryHeight);
+
+            // --- Menggambar Elemen Game ---
+            drawCone(canvasCtx, currentConePos);
+            updateAndDrawDispenser(canvasCtx, w, h);
+            
+            for (const cream of iceCreams) {
+                drawIceCream(canvasCtx, cream);
+            }
+
+            canvasCtx.restore();
+
+            const boxLifeWidth = 300;
+            const boxLifeHeight = 150;
+            const boxLifeX = 32;
+            const boxLifeY = 90; 
+            canvasCtx.drawImage(boxLife, boxLifeX, boxLifeY, boxLifeWidth, boxLifeHeight);
+                
+            const lifeIconWidth = 70;
+            const lifeIconHeight = 90;
+            const startX = 60; // Posisi X icon pertama dari kiri
+            const startY = 120; // Posisi Y icon dari atas
+            const spacing = 15; // Jarak antar icon
+
+            for (let i = 0; i < lives; i++) {
+                canvasCtx.drawImage(
+                    lifeConeImage,
+                    startX + (i * (lifeIconWidth + spacing)), // Posisi X icon ke-i
+                    startY,
+                    lifeIconWidth,
+                    lifeIconHeight
+                );
+            }
+
+            const panelWidth = 160;
+            const panelHeight = 420;
+            const panelX = w - panelWidth - 180;
+            const panelY = h / 2 - panelHeight / 2;
+            
+            // Draw fill ice cream bar behind score panel (progress bar)
+            if (fillIceCreamBarImage.complete) {
+                // Calculate fill percentage based on score (max score = 100 for full bar)
+                const maxScore = 100;
+                const fillPercentage = Math.min(score / maxScore, 1); // 0 to 1
+                
+                // Fill bar dimensions and position - disesuaikan dengan area dalam scorePanel (kanan atas)
+                const fillBarWidth = panelWidth * 0.5; // 50% dari lebar panel
+                const fillBarHeight = panelHeight * 0.65; // 65% dari tinggi panel
+                const fillBarX = panelX + panelWidth * 0.45; // Geser ke kanan (35% dari kiri panel)
+                const fillBarY = panelY + panelHeight * 0.11; // Mulai dari 10% dari atas panel (lebih ke atas)
+                
+                // Calculate how much of the bar to show (from bottom up)
+                const fillHeight = fillBarHeight * fillPercentage;
+                
+                // Draw the filled portion from bottom up
+                if (fillPercentage > 0) {
+                    // Calculate source clipping for bottom-up fill
+                    const sourceHeight = fillIceCreamBarImage.naturalHeight * fillPercentage;
+                    const sourceY = fillIceCreamBarImage.naturalHeight - sourceHeight;
+                    
+                    canvasCtx.drawImage(
+                        fillIceCreamBarImage,
+                        0, sourceY, // Source: start from calculated Y position
+                        fillIceCreamBarImage.naturalWidth, sourceHeight, // Source: full width, calculated height
+                        fillBarX, fillBarY + (fillBarHeight - fillHeight), // Destination: X and calculated Y (bottom-aligned)
+                        fillBarWidth, fillHeight // Destination: scaled width and calculated height
+                    );
+                }
+            }
+            
+            canvasCtx.drawImage(scorePanelImage, panelX, panelY, panelWidth, panelHeight);
+
+            // UI Teks (Skor & Nyawa)
+            const formattedScore = String(score).padStart(2, '0');
+            canvasCtx.fillStyle = '#FFFFFF';
+            canvasCtx.font = 'bold 48px sans-serif'; 
+            canvasCtx.textAlign = 'center'; 
+
+            canvasCtx.fillText(formattedScore, panelX + (panelWidth / 2) + 30, panelY - 30);
+            canvasCtx.textAlign = 'left';
+
+            // Animated Game Over Panel
+            if (gameOver && gameOverPanelActive) {
+                const now = Date.now();
+                const elapsed = now - gameOverAnimationStart;
+                const progress = Math.min(elapsed / gameOverAnimationDuration, 1);
+                
+                // Easing function for smooth animation (ease-out)
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                
+                // Calculate current panel position
+                gameOverPanelY = -900 + (easeOut * (gameOverTargetY + 900));
+                
+                // Semi-transparent background
+                canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                canvasCtx.fillRect(0, 0, w, h);
+                
+                // Panel dimensions - diperbesar lagi
+                const panelWidth = 800;
+                const panelHeight = 900;
+                const panelX = (w - panelWidth) / 2;
+                
+                // Draw main panel box
+                if (panelBoxImage.complete) {
+                    canvasCtx.drawImage(
+                        panelBoxImage,
+                        panelX,
+                        gameOverPanelY,
+                        panelWidth,
+                        panelHeight
+                    );
+                }
+                
+                // Draw stars (3 stars at the top) - dipindahkan ke bawah
+                if (starImage.complete) {
+                    const starSize = 90;
+                    const starY = gameOverPanelY + 180;
+                    const starSpacing = 20;
+                    const startX = panelX + (panelWidth - (3 * starSize + 2 * starSpacing)) / 2;
+                    
+                    for (let i = 0; i < 3; i++) {
+                        canvasCtx.drawImage(
+                            starImage,
+                            startX + i * (starSize + starSpacing),
+                            starY,
+                            starSize,
+                            starSize
+                        );
+                    }
+                }
+                
+                // Draw text content - dipindahkan ke bawah
+                canvasCtx.fillStyle = 'white';
+                canvasCtx.textAlign = 'center';
+                canvasCtx.font = 'bold 36px sans-serif';
+                canvasCtx.fillText('Level 01', w / 2, gameOverPanelY + 380);
+                
+                canvasCtx.font = 'bold 54px sans-serif';
+                canvasCtx.fillText('KERJA BAGUS!', w / 2, gameOverPanelY + 450);
+                
+                canvasCtx.font = '30px sans-serif';
+                canvasCtx.fillText(`Score: ${score}`, w / 2, gameOverPanelY + 540);
+                canvasCtx.fillText(`Scoops: ${Math.floor(score / 10)}`, w / 2, gameOverPanelY + 580);
+                
+                // Draw action buttons - dipindahkan ke bawah
+                const buttonY = gameOverPanelY + 700;
+                const buttonSize = 120;
+                const buttonSpacing = 100;
+                const buttonStartX = panelX + (panelWidth - (3 * buttonSize + 2 * buttonSpacing)) / 2;
+                
+                // Home button
+                if (panelHomeImage.complete) {
+                    canvasCtx.drawImage(
+                        panelHomeImage,
+                        buttonStartX,
+                        buttonY,
+                        buttonSize,
+                        buttonSize
+                    );
+                }
+                
+                // Restart button
+                if (panelRestartImage.complete) {
+                    canvasCtx.drawImage(
+                        panelRestartImage,
+                        buttonStartX + buttonSize + buttonSpacing,
+                        buttonY,
+                        buttonSize,
+                        buttonSize
+                    );
+                }
+                
+                // Next level button
+                if (panelNextLevelImage.complete) {
+                    canvasCtx.drawImage(
+                        panelNextLevelImage,
+                        buttonStartX + 2 * (buttonSize + buttonSpacing),
+                        buttonY,
+                        buttonSize,
+                        buttonSize
+                    );
+                }
+                
+                canvasCtx.textAlign = 'left';
+            }
+
+        }
+
+        function startGame() {
+            // Reset state game
+            score = 0; lives = 3; gameOver = false; gameStarted = false;
+            iceCreams = []; currentConePos = null;
+            lastSpawnTime = Date.now();
+            
+            // Reset countdown state
+            countdownActive = false;
+            countdownStartTime = 0;
+            countdownStep = 0;
+            
+            // Reset game over panel state
+            gameOverPanelActive = false;
+            gameOverAnimationStart = 0;
+            gameOverPanelY = -900;
+
+            dispenser = {
+                x: null, // Posisi X akan benar karena kanvas sudah ada ukurannya
+                y: 80,                     // Posisi Y di atas (sesuaikan)
+                targetX: null,
+                speed: 7,
+                state: 'IDLE',
+                direction: 1,
+                image: dispenserImage,
+                currentFrame: 0,
+                frameCount: 3,
+                frameWidth: 4784,       // Lebar SATU frame
+                frameHeight: 1440,      // Tinggi SATU frame (4784 / 3)
+                animationSpeed: 100,
+                lastFrameTime: 0
+            };
+            
+            loadingContainer.classList.remove('hidden');
+            gameWrapper.classList.add('hidden');
+
+            if (!hands) { // Inisialisasi hanya sekali
+                hands = new window.Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+                });
+                // Optimasi untuk performa lebih cepat
+                hands.setOptions({ 
+                    maxNumHands: 2, 
+                    modelComplexity: 0,        // Tetap 0 (paling cepat)
+                    minDetectionConfidence: 0.5,  // Turunkan dari 0.7 ke 0.5
+                    minTrackingConfidence: 0.5,   // Turunkan dari 0.7 ke 0.5
+                    staticImageMode: false,       // Pastikan false untuk video
+                    selfieMode: true             // Optimasi untuk selfie mode
+                });
+                hands.onResults(onResults);
+            }
+            if (!camera) { // Inisialisasi hanya sekali
+                camera = new window.Camera(videoElement, {
+                    onFrame: async () => await hands.send({ image: videoElement }),
+                    width: 640, height: 480,  // Turunkan resolusi dari 1280x720 ke 640x480
+                    facingMode: 'user'        // Pastikan menggunakan front camera
+                });
+            }
+            
+            camera.start().catch(err => {
+                loadingText.innerText = 'Gagal mengakses kamera. Pastikan diizinkan.';
+            });
+        }
+
+        function stopGame() {
+            if (camera) {
+                camera.stop();
+            }
+        }
+    </script>
+</body>
+</html>
+

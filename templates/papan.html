@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tangkap Rasa - Edisi Keseimbangan (Optimized)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        .screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s;
+        }
+        .hidden { display: none; }
+        
+        /* DIUBAH: Atur posisi canvas di atas video */
+        #game-wrapper { position: relative; width: 100%; height: 100%; }
+        #webcam, #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        /* DIUBAH: Balik video secara horizontal agar seperti cermin */
+        #webcam { transform: scaleX(-1); }
+        /* DIUBAH: Pastikan canvas di lapisan paling atas */
+        #gameCanvas { z-index: 5; }
+
+        .loader {
+            border: 8px solid #f3f3f3; border-top: 8px solid #3498db;
+            border-radius: 50%; width: 60px; height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='papan_img/backgrounds.png') }}');">
+        <div class="relative w-full h-full flex items-center justify-center">
+            <div class="relative w-full max-w-8xl flex flex-col items-center">
+                <img src="{{ url_for('static', filename='papan_img/titleBox.png') }}" alt="Menu Utama" class="w-8/12 z-10 -mt-64">
+                <div class="absolute bottom-12 md:bottom-8 left-0 right-0 flex justify-center gap-2 w-full z-20"> 
+                    <button id="play-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='papan_img/tombolPlay.png') }}" alt="Play" class="pointer-events-none w-full h-full object-contain">
+                    </button>
+                    <button id="settings-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='papan_img/tombolPengaturan.png') }}" alt="Pengaturan" class="pointer-events-none w-full h-full object-contain">
+                    </button>
+                    <button id="quit-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='papan_img/tombolKeluar.png') }}" alt="Keluar" class="pointer-events-none w-full h-full object-contain">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='papan_img/backgrounds.png') }}');">
+        <div class="relative w-full h-full">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10/12 max-w-2xl">
+                <img src="{{ url_for('static', filename='papan_img/levelbox.png') }}" alt="Pilih Level Box" class="w-full">
+                <div class="absolute inset-0 flex justify-center items-end gap-6 lg:pb-56">
+                    <button id="level-1-btn" class="transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='papan_img/level1btn.png') }}" alt="Level 1" class="w-24 md:w-32">
+                    </button>
+                    <button id="level-2-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='papan_img/levelLockedbtn.png') }}" alt="Level 2 Locked" class="w-24 md:w-32 opacity-50">
+                    </button>
+                    <button id="level-3-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='papan_img/levelLockedbtn.png') }}" alt="Level 3 Locked" class="w-24 md:w-32 opacity-50">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="game-screen" class="screen hidden bg-gray-800">
+        <div id="loading-container" class="flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow-lg">
+            <div class="loader"></div>
+            <p id="loading-text" class="mt-4 text-gray-700 font-semibold">Menunggu akses kamera...</p>
+        </div>
+        <div id="game-wrapper" class="w-full h-full hidden">
+            <button id="exit-game-btn" class="absolute top-4 left-4 z-10 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm">
+                &larr; Keluar
+            </button>
+            <video id="webcam" autoplay playsinline></video>
+            <canvas id="gameCanvas"></canvas>
+        </div>
+    </div>
+
+
+    <script>
+        // --- MANAJEMEN LAYAR & NAVIGASI ---
+        const menuScreen = document.getElementById('menu-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const levelScreen = document.getElementById('level-screen')
+        const playBtn = document.getElementById('play-btn');
+        const level1Btn = document.getElementById('level-1-btn')
+        const settingsBtn = document.getElementById('settings-btn');
+        const quitBtn = document.getElementById('quit-btn');
+        const exitGameBtn = document.getElementById('exit-game-btn');
+
+        playBtn.addEventListener('click', () => {
+            menuScreen.classList.add('hidden');
+            levelScreen.classList.remove('hidden');
+        });
+        settingsBtn.addEventListener('click', () => alert('Halaman Pengaturan belum dibuat!'));
+        quitBtn.addEventListener('click', () => alert('Tombol Keluar ditekan!'));
+        exitGameBtn.addEventListener('click', () => {
+            stopGame();
+            gameScreen.classList.add('hidden');
+            menuScreen.classList.remove('hidden');
+        });
+        level1Btn.addEventListener('click', () => {
+            levelScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            startGame();
+        });
+
+        // --- Variabel & Referensi Game ---
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('gameCanvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const loadingContainer = document.getElementById('loading-container');
+        const loadingText = document.getElementById('loading-text');
+        const gameWrapper = document.getElementById('game-wrapper');
+
+        let plankImage = new Image();
+        plankImage.src = "{{ url_for('static', filename='papan_img/papan.png') }}";
+        let ballImage = new Image();
+        ballImage.src = "{{ url_for('static', filename='papan_img/bola.png') }}";
+        let basketImage = new Image();
+        basketImage.src = "{{ url_for('static', filename='papan_img/bucket.png') }}";
+        let machineryImage = new Image();
+        machineryImage.src = "{{ url_for('static', filename='papan_img/topbar.png') }}";
+        let dispenserImage = new Image();
+        dispenserImage.src = "{{ url_for('static', filename='papan_img/dropPointandGear.png') }}";
+        let hiasanPojokImage = new Image();
+        hiasanPojokImage.src = "{{ url_for('static', filename='papan_img/leftbar.png') }}";
+
+
+        let score, gameOver, gameStarted, hands, camera, plank, ball, basket, dispenser, physicsConstants, hiasanAnimasi, hiasanSequenceIndex;
+
+        // --- Fungsi-fungsi Gambar ---
+        function drawPlank(ctx, p) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle);
+            // DIUBAH: Menggunakan halfWidth dan halfHeight yang sudah dihitung sebelumnya
+            ctx.drawImage(plankImage, -p.halfWidth, -p.halfHeight, p.width, p.height);
+            ctx.restore();
+        }
+        function drawBall(ctx, b) {
+            if (!b.isActive) return;
+            ctx.save();
+            ctx.drawImage(ballImage, b.x - b.radius, b.y - b.radius, b.radius * 2, b.radius * 2);
+            ctx.restore();
+        }
+        function drawBasket(ctx, bsk) {
+            ctx.drawImage(basketImage, bsk.x - bsk.width / 2, bsk.y - bsk.height / 2, bsk.width, bsk.height);
+        }
+
+        function updateAndDrawDispenser(ctx, w, h) {
+            if (!dispenser) return;
+
+            switch (dispenser.state) {
+                case 'IDLE':
+                    if (Date.now() - dispenser.idleMoveTimer > dispenser.idleMoveCooldown) {
+                        dispenser.targetX = Math.random() * (w * 0.8) + (w * 0.1);
+                        dispenser.state = 'IDLE_MOVING';
+                        dispenser.idleMoveTimer = Date.now();
+                    }
+                    break;
+
+                case 'IDLE_MOVING':
+                case 'MOVING_TO_SPAWN':
+                    if (Math.abs(dispenser.x - dispenser.targetX) > dispenser.speed) {
+                        if (dispenser.x < dispenser.targetX) dispenser.x += dispenser.speed;
+                        else dispenser.x -= dispenser.speed;
+                    } else {
+                        dispenser.x = dispenser.targetX;
+                        if (dispenser.state === 'MOVING_TO_SPAWN') {
+                            dispenser.state = 'DISPENSING';
+                            dispenser.currentFrame = 0;
+                        } else {
+                            dispenser.state = 'IDLE';
+                        }
+                    }
+                    break;
+
+                case 'DISPENSING':
+                    if (Date.now() - dispenser.lastFrameTime > dispenser.animationSpeed) {
+                        dispenser.currentFrame++;
+                        dispenser.lastFrameTime = Date.now();
+                    }
+                    if (dispenser.currentFrame >= dispenser.frameCount) {
+                        resetBall();
+                        dispenser.state = 'IDLE';
+                        dispenser.currentFrame = 0;
+                    }
+                    break;
+            }
+            
+            const sourceX = dispenser.currentFrame * dispenser.frameWidth;
+            const displayWidth = dispenser.frameWidth; 
+            const displayHeight = dispenser.frameHeight;
+
+            ctx.drawImage(
+                dispenser.image,
+                sourceX, 0,
+                dispenser.frameWidth, dispenser.frameHeight,
+                dispenser.x - (displayWidth / 2),
+                dispenser.y - (displayHeight / 2),
+                displayWidth, displayHeight
+            );
+        }
+        
+        function drawHiasan(ctx) {
+            if (!hiasanAnimasi) return;
+            hiasanAnimasi.currentFrame = hiasanSequenceIndex;
+            const sourceX = hiasanAnimasi.currentFrame * hiasanAnimasi.frameWidth;
+
+            ctx.drawImage(
+                hiasanAnimasi.image,
+                sourceX, 0,
+                hiasanAnimasi.frameWidth, hiasanAnimasi.frameHeight,
+                hiasanAnimasi.x, hiasanAnimasi.y,
+                hiasanAnimasi.width, hiasanAnimasi.height
+            );
+        }
+
+        // --- Logika Game ---
+        function updatePhysicsAndCollision() {
+            if (!ball || !plank || !ball.isActive) return;
+
+            ball.vy += physicsConstants.gravity;
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            const dx = ball.x - plank.x;
+            const dy = ball.y - plank.y;
+            const rotatedX = dx * Math.cos(-plank.angle) - dy * Math.sin(-plank.angle);
+            const rotatedY = dx * Math.sin(-plank.angle) + dy * Math.cos(-plank.angle);
+            
+            // DIUBAH: Menggunakan halfWidth dan halfHeight yang sudah dihitung
+            const closestX = Math.max(-plank.halfWidth, Math.min(plank.halfWidth, rotatedX));
+            const closestY = Math.max(-plank.halfHeight, Math.min(plank.halfHeight, rotatedY));
+            
+            // DIUBAH: Math.pow(x, 2) diganti dengan x * x untuk sedikit optimasi
+            const distance = Math.sqrt((rotatedX - closestX)**2 + (rotatedY - closestY)**2);
+
+            if (distance < ball.radius) {
+                const penetration = ball.radius - distance;
+                const collisionVectorX = rotatedX - closestX;
+                const collisionVectorY = rotatedY - closestY;
+                const vectorLength = Math.sqrt(collisionVectorX**2 + collisionVectorY**2);
+                
+                let normalLocalX = collisionVectorX / vectorLength;
+                let normalLocalY = collisionVectorY / vectorLength;
+                
+                if (isNaN(normalLocalX) || isNaN(normalLocalY)) {
+                    normalLocalX = 0; normalLocalY = -1;
+                }
+                
+                const normalWorldX = normalLocalX * Math.cos(plank.angle) - normalLocalY * Math.sin(plank.angle);
+                const normalWorldY = normalLocalX * Math.sin(plank.angle) + normalLocalY * Math.cos(plank.angle);
+                
+                ball.x += normalWorldX * penetration;
+                ball.y += normalWorldY * penetration;
+                
+                const dotProduct = ball.vx * normalWorldX + ball.vy * normalWorldY;
+                const newVx = ball.vx - 2 * dotProduct * normalWorldX;
+                const newVy = ball.vy - 2 * dotProduct * normalWorldY;
+                
+                ball.vx = newVx * physicsConstants.friction;
+                ball.vy = newVy * physicsConstants.bounce;
+            }
+        }
+        
+        function resetBall() {
+            if (!ball || !dispenser) return;
+            ball.y = dispenser.y + (dispenser.frameHeight / 2) + ball.radius;
+            ball.x = dispenser.x;
+            ball.vx = 0;
+            ball.vy = 0;
+            ball.isActive = true;
+        }
+
+        // --- GAME LOOP UTAMA ---
+        function onResults(results) {
+            if (!gameStarted && videoElement.readyState >= 3) { // DIUBAH: Cek video sudah siap
+                canvasElement.width = window.innerWidth;
+                canvasElement.height = window.innerHeight;
+                gameStarted = true;
+                loadingContainer.classList.add('hidden');
+                gameWrapper.classList.remove('hidden');
+            }
+            if (!gameStarted) return;
+
+            const w = canvasElement.width;
+            const h = canvasElement.height;
+            
+            if (plank && plank.x === null) {
+                plank.x = w / 2;
+                plank.y = h / 2;
+                basket.x = w - basket.width / 2 - 40;
+                basket.y = h - basket.height / 2 - 40;
+                dispenser.x = w / 2;
+                resetBall();
+            }
+
+            if (!gameOver) {
+                const maxAngle = 0.8;
+                const angleSensitivity = 0.005;
+                const positionSmoothing = 0.2;
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
+                    const wrist1 = results.multiHandLandmarks[0][0];
+                    const wrist2 = results.multiHandLandmarks[1][0];
+                    const midX = (((1 - wrist1.x) + (1 - wrist2.x)) / 2) * w; 
+                    const midY = ((wrist1.y + wrist2.y) / 2) * h;
+                    plank.x += (midX - plank.x) * positionSmoothing;
+                    plank.y += (midY - plank.y) * positionSmoothing;
+                    let leftHandY = (wrist1.x > wrist2.x) ? wrist1.y : wrist2.y;
+                    let rightHandY = (wrist1.x < wrist2.x) ? wrist1.y : wrist2.y;
+                    let yDiff = (rightHandY - leftHandY) * h;
+                    let targetAngle = yDiff * angleSensitivity;
+                    plank.angle = Math.max(-maxAngle, Math.min(maxAngle, targetAngle));
+                } else if (results.multiHandLandmarks && results.multiHandLandmarks.length === 1) {
+                    const wrist = results.multiHandLandmarks[0][0];
+                    const targetX = wrist.x * w;
+                    const targetY = wrist.y * h;
+                    plank.x += (targetX - plank.x) * positionSmoothing;
+                    plank.y += (targetY - plank.y) * positionSmoothing;
+                    plank.angle = 0;
+                }
+
+                updatePhysicsAndCollision();
+                
+                const basketHitbox = {
+                    left: basket.x - basket.width / 2, right: basket.x + basket.width / 2,
+                    top: basket.y - basket.height / 2, bottom: basket.y + basket.height / 2
+                };
+                if (ball.isActive && ball.x > basketHitbox.left && ball.x < basketHitbox.right && ball.y > basketHitbox.top && ball.y < basketHitbox.bottom) {
+                    score += 10;
+                    ball.isActive = false;
+                    dispenser.state = 'MOVING_TO_SPAWN';
+                    dispenser.targetX = Math.random() * (w * 0.8) + (w * 0.1);
+                    hiasanSequenceIndex = (hiasanSequenceIndex + 1) % hiasanAnimasi.frameCount; 
+                }
+
+                if (ball.isActive && ball.y - ball.radius > h) {
+                    gameOver = true;
+                }
+            }
+            
+            // --- Bagian Menggambar ---
+            canvasCtx.clearRect(0, 0, w, h);
+            
+            // DIUBAH: Hapus baris di bawah ini! Ini adalah penyebab utama lag.
+            // canvasCtx.drawImage(results.image, 0, 0, w, h);
+            // Latar belakang video sudah ditampilkan oleh elemen <video> itu sendiri.
+            
+            canvasCtx.drawImage(machineryImage, 0, 0, w, 150);
+            drawPlank(canvasCtx, plank);
+            drawBasket(canvasCtx, basket);
+            drawBall(canvasCtx, ball);
+            updateAndDrawDispenser(canvasCtx, w, h);
+            drawHiasan(canvasCtx);
+
+            // UI
+            canvasCtx.fillStyle = '#FFFFFF';
+            canvasCtx.font = 'bold 48px "Luckiest Guy", sans-serif';
+            canvasCtx.textAlign = 'center';
+            canvasCtx.strokeStyle = 'black';
+            canvasCtx.lineWidth = 5;
+            canvasCtx.strokeText(`SKOR: ${score}`, w / 2, 80);
+            canvasCtx.fillText(`SKOR: ${score}`, w / 2, 80);
+            
+            if (gameOver) {
+                canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                canvasCtx.fillRect(0, 0, w, h);
+                canvasCtx.fillStyle = 'white';
+                canvasCtx.textAlign = 'center';
+                canvasCtx.font = 'bold 70px "Luckiest Guy", sans-serif';
+                canvasCtx.strokeText('GAME OVER', w / 2, h / 2 - 20);
+                canvasCtx.fillText('GAME OVER', w / 2, h / 2 - 20);
+                canvasCtx.font = '40px sans-serif';
+                canvasCtx.fillText(`Skor Akhir: ${score}`, w / 2, h / 2 + 40);
+                canvasCtx.textAlign = 'left';
+            }
+        }
+
+        function startGame() {
+            score = 0;
+            gameOver = false;
+            gameStarted = false;
+
+            // DIUBAH: Tambahkan halfWidth dan halfHeight untuk efisiensi
+            plank = { x: null, y: null, width: 760, height: 80, angle: 0, halfWidth: 380, halfHeight: 40 };
+            ball = { x: null, y: 50, radius: 40, vx: 0, vy: 0, isActive: false };
+            basket = { x: null, y: null, width: 265, height: 260 };
+            
+            dispenser = {
+                x: null, y: 120, targetX: null, speed: 10,
+                image: dispenserImage,
+                currentFrame: 0, frameCount: 3,
+                frameWidth: 435, frameHeight: 272,
+                animationSpeed: 150, lastFrameTime: 0,
+                state: 'IDLE',
+                idleMoveTimer: Date.now(),
+                idleMoveCooldown: 3000
+            };
+
+            hiasanAnimasi = {
+                image: hiasanPojokImage,
+                x: 0, y: 0, width: 201, height: 640,
+                frameWidth: 204, frameHeight: 640, frameCount: 6,
+                currentFrame: 0
+            };
+            
+            hiasanSequenceIndex = 0;
+
+            physicsConstants = { gravity: 0.25, friction: 0.99, bounce: 0.7 };
+            
+            loadingContainer.classList.remove('hidden');
+            gameWrapper.classList.add('hidden');
+            
+            if (!hands) {
+                hands = new window.Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+                hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 0,
+                    minDetectionConfidence: 0.6,
+                    minTrackingConfidence: 0.6
+                });
+                hands.onResults(onResults);
+            }
+
+            if (!camera) {
+                camera = new window.Camera(videoElement, {
+                    onFrame: async () => await hands.send({ image: videoElement }),
+                    // DIUBAH: Turunkan resolusi kamera secara signifikan
+                    width: 640, height: 360,
+                });
+            }
+            camera.start().catch(err => {
+                loadingText.innerText = 'Gagal mengakses kamera. Pastikan diizinkan.';
+                console.error("Camera Error:", err);
+            });
+        }
+
+        function stopGame() {
+            if (camera) { camera.stop(); }
+        }
+    </script>
+</body>
+</html>

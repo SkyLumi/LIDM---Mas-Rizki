@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Games - CloudsUp</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div class="flex min-h-screen">
+        <!-- ======================== -->
+        <!--         SIDEBAR          -->
+        <!-- ======================== -->
+        <aside class="w-80 bg-red-600 text-white flex flex-col p-6 fixed h-full">
+            <!-- Logo -->
+            <div class="flex flex-col items-center text-center mb-12">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="CloudsUp Logo" class="w-40">
+            </div>
+
+            <!-- Navigasi -->
+            <nav class="flex flex-col gap-3">
+                <a href="/" class="flex items-center p-3 bg-white text-red-600 rounded-lg font-bold shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                    Games
+                </a>
+                <a href="#" class="flex items-center p-3 text-red-200 hover:bg-red-700 hover:text-white rounded-lg font-bold transition-colors">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2a4 4 0 00-4-4H3a4 4 0 00-4 4v2m15-2v-2a4 4 0 00-4-4h-2a4 4 0 00-4 4v2m15 2H3" /></svg>
+                    Laporan
+                </a>
+                 <a href="#" class="flex items-center p-3 text-red-200 hover:bg-red-700 hover:text-white rounded-lg font-bold transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924-1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Pengaturan
+                </a>
+            </nav>
+
+            <!-- Progress Box -->
+            <div class="mt-auto bg-white rounded-2xl p-6 flex items-center justify-between">
+                <!-- Kolom Kiri: Teks -->
+                <div class="flex flex-col h-full">
+                    <p class="font-bold text-slate-800 leading-tight text-sm">Main setidaknya<br>20 menit/minggu</p>
+                    <a href="#" class="font-semibold text-red-600 hover:underline mt-auto text-xs">Lihat Detail Laporan</a>
+                </div>
+                
+                <!-- Kolom Kanan: Progress Bar -->
+                <div class="flex flex-col items-center">
+                    <div class="relative w-24 h-24">
+                        <svg class="w-full h-full" viewBox="0 0 100 100">
+                            <!-- Background Circle -->
+                            <circle class="text-slate-200" stroke-width="10" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" />
+                            <!-- Progress Circle -->
+                            <circle class="text-red-500" stroke-width="10" stroke-linecap="round" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50"
+                                style="stroke-dasharray: 282.7; stroke-dashoffset: calc(282.7 - (282.7 * 75) / 100);"
+                                transform="rotate(-90 50 50)" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                             <span class="font-extrabold text-slate-800 text-2xl">15</span>
+                        </div>
+                    </div>
+                    <span class="text-slate-500 text-sm mt-2 font-semibold">Menit tersisa</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ======================== -->
+        <!--       MAIN CONTENT       -->
+        <!-- ======================== -->
+        <div class="flex-1 ml-80">
+            
+            <!-- Header Atas -->
+            <header class="flex items-center justify-end p-4 bg-blue-600 text-white shadow-md">
+                <div class="flex items-center gap-6">
+                    <!-- Language Selector -->
+                    <button class="flex items-center gap-2 hover:bg-blue-700 p-2 rounded-lg transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802" />
+                        </svg>
+                        <span class="font-semibold text-sm">Bahasa Indonesia</span>
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    </button>
+                    
+                    <!-- Divider -->
+                    <div class="w-px h-6 bg-blue-400"></div>
+
+                    <!-- Camera Icon Button -->
+                    <button class="relative w-10 h-10 flex items-center justify-center bg-white/20 rounded-full hover:bg-white/30 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75z" />
+                        </svg>
+                        <div class="absolute top-1 right-1 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-blue-600"></div>
+                    </button>
+
+                    <!-- User Profile -->
+                    <div class="flex items-center gap-3">
+                        <img src="https://placehold.co/40x40/f87171/ffffff?text=D" alt="Avatar" class="rounded-full">
+                        <div>
+                            <p class="font-bold text-sm">Dina Mustawati</p>
+                            <p class="text-blue-200 text-xs">Tenaga Pendidik</p>
+                        </div>
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-300" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Konten Utama -->
+            <main class="p-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <!-- Kolom Kiri (Daftar Game) -->
+                    <div class="lg:col-span-2">
+                        <div class="flex items-center justify-between mb-8">
+                            <h2 class="text-4xl font-bold text-gray-800">Daftar Games</h2>
+                            <select class="rounded-lg border-slate-300">
+                                <option>Semua Game</option>
+                                <option>Game Baru</option>
+                            </select>
+                        </div>
+
+                        <!-- Daftar Game Cards -->
+                        <div class="flex flex-col gap-6">
+                            
+                            <!-- Game Card: Gelembung Ajaib -->
+                            <div class="bg-sky-50 rounded-2xl overflow-hidden flex items-center p-4 gap-6 transition-transform duration-300 hover:scale-[1.02]">
+                                <!-- Perbaikan: Ganti h-32 dan object-cover dengan h-auto -->
+                                <img src="{{ url_for('static', filename='img/gelembung.png') }}" alt="Game Gelembung Ajaib" class="w-40 h-auto rounded-xl flex-shrink-0">
+                                <div class="flex flex-col flex-grow self-stretch">
+                                    <h3 class="text-xl font-bold text-gray-900">Gelembung Ajaib</h3>
+                                    <p class="text-gray-500 mt-1 text-sm">Masuki dunia yang penuh gelembung!</p>
+                                    <p class="text-gray-400 text-xs mt-2">Pelajari Lebih Lanjut</p>
+                                    <div class="flex gap-2 my-3">
+                                        <div class="bg-red-100 p-2 rounded-full" title="Motorik Kasar"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1 1 0 00-.818.424l-2 3a1 1 0 01-1.636 0l-2-3A1 1 0 006.5 8H3a1 1 0 01-1-1V5a1 1 0 011-1h3a1 1 0 001-1v-.5z" /><path d="M10 12.5a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3a1 1 0 011-1h5z" /></svg></div>
+                                        <div class="bg-blue-100 p-2 rounded-full" title="Kognitif"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 00-1 1v.065a4.002 4.002 0 00-3.23 3.778 4.002 4.002 0 003.483 3.864l-.67 1.34A1 1 0 006.5 14h7a1 1 0 00.916-1.447l-.67-1.34a4.002 4.002 0 003.483-3.864 4.002 4.002 0 00-3.23-3.778V4a1 1 0 00-1-1H7zm-3 4.065A2.002 2.002 0 017.065 5h5.87A2.002 2.002 0 0116 7.065v.014a2.002 2.002 0 01-1.812 1.995l-.523.052a1 1 0 00-.813.979l.068.543a1 1 0 001.372.84l.523-.261A2.002 2.002 0 0116 12.935V13a1 1 0 01-1 1H5a1 1 0 01-1-1v-.065a2.002 2.002 0 011.97-1.995l.523-.052a1 1 0 00.84-1.372l-.068-.543a1 1 0 00-.979-.813l-.523-.052A2.002 2.002 0 014 7.079v-.014z" /></svg></div>
+                                    </div>
+                                    <a href="/gelembung-game" class="w-full mt-auto text-center block bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                                        Mulai Bermain
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- Game Card: Tangkap Rasa -->
+                            <div class="bg-sky-50 rounded-2xl overflow-hidden flex items-center p-4 gap-6 transition-transform duration-300 hover:scale-[1.02]">
+                                <!-- Perbaikan: Ganti h-32 dan object-cover dengan h-auto -->
+                                <img src="{{ url_for('static', filename='img/eskrim.png') }}" alt="Game Tangkap Rasa" class="w-40 h-auto rounded-xl flex-shrink-0">
+                                <div class="flex flex-col flex-grow self-stretch">
+                                    <h3 class="text-xl font-bold text-gray-900">Tangkap Rasa</h3>
+                                    <p class="text-gray-500 mt-1 text-sm">Pertarungan Penangkapan Es Krim Terhebat!</p>
+                                    <p class="text-gray-400 text-xs mt-2">Pelajari Lebih Lanjut</p>
+                                    <div class="flex gap-2 my-3">
+                                        <div class="bg-red-100 p-2 rounded-full" title="Motorik Kasar"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1 1 0 00-.818.424l-2 3a1 1 0 01-1.636 0l-2-3A1 1 0 006.5 8H3a1 1 0 01-1-1V5a1 1 0 011-1h3a1 1 0 001-1v-.5z" /><path d="M10 12.5a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3a1 1 0 011-1h5z" /></svg></div>
+                                        <div class="bg-blue-100 p-2 rounded-full" title="Kognitif"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 00-1 1v.065a4.002 4.002 0 00-3.23 3.778 4.002 4.002 0 003.483 3.864l-.67 1.34A1 1 0 006.5 14h7a1 1 0 00.916-1.447l-.67-1.34a4.002 4.002 0 003.483-3.864 4.002 4.002 0 00-3.23-3.778V4a1 1 0 00-1-1H7zm-3 4.065A2.002 2.002 0 017.065 5h5.87A2.002 2.002 0 0116 7.065v.014a2.002 2.002 0 01-1.812 1.995l-.523.052a1 1 0 00-.813.979l.068.543a1 1 0 001.372.84l.523-.261A2.002 2.002 0 0116 12.935V13a1 1 0 01-1 1H5a1 1 0 01-1-1v-.065a2.002 2.002 0 011.97-1.995l.523-.052a1 1 0 00.84-1.372l-.068-.543a1 1 0 00-.979-.813l-.523-.052A2.002 2.002 0 014 7.079v-.014z" /></svg></div>
+                                    </div>
+                                    <a href="/eskrim-game" class="w-full mt-auto text-center block bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                                        Mulai Bermain
+                                    </a>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Kolom Kanan (Profil & Instruksi) -->
+                    <div class="flex flex-col gap-8">
+                        <!-- Profil Card -->
+                        <div class="bg-red-600 text-white rounded-2xl p-6">
+                             <div class="flex items-center gap-4">
+                                <img src="https://placehold.co/48x48/fef2f2/991b1b?text=A" alt="Avatar" class="rounded-full">
+                                <div>
+                                    <p class="font-bold">Ahmad Ridho</p>
+                                    <p class="text-red-200 text-sm">Siswa</p>
+                                </div>
+                             </div>
+                        </div>
+
+                        <!-- Instruksi Card -->
+                        <div class="bg-blue-600 text-white rounded-2xl p-6">
+                            <h3 class="text-2xl font-bold">Ayo mulai bermain!</h3>
+                            <p class="text-blue-200 mt-1">Pastikan untuk mengikuti semua langkah-langkah ini >></p>
+
+                            <div class="mt-6 flex flex-col gap-5">
+                                <div class="flex items-start gap-4">
+                                    <div class="bg-blue-800 p-2 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg></div>
+                                    <div>
+                                        <p class="font-bold">LANGKAH 1</p>
+                                        <p class="text-blue-200 text-sm">Hubungkan webcam dan periksa koneksi internet Anda.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4">
+                                    <div class="bg-blue-800 p-2 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></div>
+                                    <div>
+                                        <p class="font-bold">LANGKAH 2</p>
+                                        <p class="text-blue-200 text-sm">Hubungkan dengan layar TV (jika tersedia) dan berdiri setidaknya 2 meter.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+
+    </div>
+</body>
+</html>
+

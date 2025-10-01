@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tangkap Rasa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        /* Kontainer untuk setiap "layar" */
+        .screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s;
+        }
+        .hidden { display: none; }
+        #gameCanvas { width: 100%; height: 100%; object-fit: cover; }
+        .loader {
+            border: 8px solid #f3f3f3; border-top: 8px solid #3498db;
+            border-radius: 50%; width: 60px; height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    <!-- Import MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <!-- ======================== -->
+    <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
+    <!-- ======================== -->
+    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='eskrim_img/mainMenuPage.png') }}');">
+        <div class="relative w-full h-full flex items-center justify-center">
+            
+            <!-- Panel Menu Utama -->
+            <!-- TAMBAHKAN 'relative' DI SINI untuk menjadi acuan posisi tombol -->
+            <div class="relative w-full max-w-8xl flex flex-col items-center">
+                <img src="{{ url_for('static', filename='eskrim_img/titlebox.png') }}" alt="Menu Utama" class="w-10/12 z-10">
+
+                <!-- Kontainer Tombol-Tombol -->
+                <!-- GANTI class positioningnya dengan 'absolute' -->
+                <div class="absolute bottom-12 md:bottom-8 left-0 right-0 flex justify-center gap-4 w-full z-20">
+                    <button id="play-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='eskrim_img/playButton.png') }}" alt="Play" class="pointer-events-none">
+                    </button>
+                    <button id="settings-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='eskrim_img/pengaturanButton.png') }}" alt="Pengaturan" class="pointer-events-none">
+                    </button>
+                    <button id="quit-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='eskrim_img/keluarButton.png') }}" alt="Keluar" class="pointer-events-none">
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ======================== -->
+    <!--   LAYAR 1.5: PILIH LEVEL  -->
+    <!-- ======================== -->
+    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='eskrim_img/backgroundLevelMenu.png') }}');">
+        
+        <!-- Wrapper 'relative' yang mengisi seluruh layar untuk menjadi acuan posisi absolut -->
+        <div class="relative w-full h-full">
+            
+            <!-- Box Level, diposisikan absolut di atas-tengah. Jarak dari atas diubah jadi 15% -->
+            <div class="absolute left-1/2 -translate-x-1/2 w-10/12 max-w-2xl">
+                <img src="{{ url_for('static', filename='eskrim_img/levelbox.png') }}" alt="Pilih Level Box" class="w-full">
+                
+                <!-- Container Tombol Level, dibuat 'absolute' agar menimpa gambar box -->
+                <div class="absolute inset-0 flex justify-center items-end gap-6 lg:pb-40">
+                    <button id="level-1-btn" class="transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='eskrim_img/level1btn.png') }}" alt="Level 1" class="w-24 md:w-32">
+                    </button>
+                    <button id="level-2-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='eskrim_img/levelLockedbtn.png') }}" alt="Level 2 Locked" class="w-24 md:w-32 opacity-50">
+                    </button>
+                    <button id="level-3-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='eskrim_img/levelLockedbtn.png') }}" alt="Level 3 Locked" class="w-24 md:w-32 opacity-50">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <!-- ======================== -->
+    <!--     LAYAR 2: GAMEPLAY      -->
+    <!-- ======================== -->
+    <div id="game-screen" class="screen hidden bg-black">
+        <div id="loading-container" class="flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow-lg">
+            <div class="loader"></div>
+            <p id="loading-text" class="mt-4 text-gray-700 font-semibold">Menunggu akses kamera...</p>
+        </div>
+        <div id="game-wrapper" class="w-full h-full hidden">
+            <button id="exit-game-btn" class="absolute top-4 left-4 z-10 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm">
+                &larr; Keluar
+            </button>
+            <video id="webcam" class="hidden" autoplay playsinline></video>
+            <canvas id="gameCanvas"></canvas>
+        </div>
+    </div>
+
+
+    <!-- ======================== -->
+    <!--      LOGIKA JAVASCRIPT     -->
+    <!-- ======================== -->
+    <script>
+        // --- MANAJEMEN LAYAR & NAVIGASI ---
+        const menuScreen = document.getElementById('menu-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const levelScreen = document.getElementById('level-screen')
+        const playBtn = document.getElementById('play-btn');
+        const level1Btn = document.getElementById('level-1-btn')
+        const settingsBtn = document.getElementById('settings-btn');
+        const quitBtn = document.getElementById('quit-btn');
+        const exitGameBtn = document.getElementById('exit-game-btn');
+
+        playBtn.addEventListener('click', () => {
+            menuScreen.classList.add('hidden');
+            levelScreen.classList.remove('hidden');
+        });
+        settingsBtn.addEventListener('click', () => { alert('Halaman Pengaturan belum dibuat!'); });
+        quitBtn.addEventListener('click', () => { alert('Tombol Keluar ditekan!'); });
+        exitGameBtn.addEventListener('click', () => {
+            stopGame();
+            gameScreen.classList.add('hidden');
+            menuScreen.classList.remove('hidden');
+        });
+        level1Btn.addEventListener('click', () => {
+            levelScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            startGame();
+        });
+
+        // --- Variabel & Referensi Game ---
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('gameCanvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const loadingContainer = document.getElementById('loading-container');
+        const loadingText = document.getElementById('loading-text');
+        const gameWrapper = document.getElementById('game-wrapper');
+
+        let score, lives, gameOver, gameStarted, bubbles, lastBubbleSpawnTime, hands, camera;
+
+        // --- ASET GAMBAR ---
+        let bubbleImage = new Image();
+        bubbleImage.src = "{{ url_for('static', filename='gelembung_img/gelembung.png') }}"; // Pastikan nama file dan folder benar
+
+        let scorePanelImage = new Image();
+        scorePanelImage.src = "{{ url_for('static', filename='eskrim_img/scorePanel.png') }}";
+
+        let lifeConeImage = new Image();
+        lifeConeImage.src = "{{ url_for('static', filename='eskrim_img/life-cone-icon.png') }}";
+
+        let waterEffectImage = new Image();
+        waterEffectImage.src = "{{ url_for('static', filename='gelembung_img/efek-air.png') }}";
+
+
+        // --- FUNGSI-FUNGSI GAMBAR ---
+        function drawBubble(ctx, bubble) {
+            if (!bubble) return;
+            const bubbleSize = 100; // Sesuaikan ukuran gelembung
+            ctx.drawImage(
+                bubbleImage,
+                bubble.x - bubbleSize / 2,
+                bubble.y - bubbleSize / 2,
+                bubbleSize,
+                bubbleSize
+            );
+        }
+        
+        // --- FUNGSI-FUNGSI GAME ---
+        function onResults(results) {
+            if (!gameStarted && videoElement.videoWidth > 0) {
+                canvasElement.width = window.innerWidth;
+                canvasElement.height = window.innerHeight;
+                gameStarted = true;
+                loadingContainer.classList.add('hidden');
+                gameWrapper.classList.remove('hidden');
+            }
+            if (!gameStarted) return;
+
+            const w = canvasElement.width;
+            const h = canvasElement.height;
+
+            // --- UPDATE LOGIKA GAME ---
+            if (!gameOver) {
+                // 1. Munculkan Gelembung Baru (jika tidak ada gelembung di layar)
+                if (bubbles.length === 0) {
+                    let startX, startY, speedX, speedY;
+                    const side = Math.floor(Math.random() * 4); // Pilih sisi acak (0=bawah, 1=atas, 2=kiri, 3=kanan)
+                    const speed = Math.random() * 3 + 3; // Kecepatan dasar
+
+                    switch (side) {
+                        case 0: // Muncul dari BAWAH
+                            startX = Math.random() * w;
+                            startY = h + 50;
+                            speedX = 0;
+                            speedY = -speed; // Bergerak ke atas
+                            break;
+                        case 1: // Muncul dari ATAS
+                            startX = Math.random() * w;
+                            startY = -50;
+                            speedX = 0;
+                            speedY = speed; // Bergerak ke bawah
+                            break;
+                        case 2: // Muncul dari KIRI
+                            startX = -50;
+                            startY = Math.random() * h;
+                            speedX = speed; // Bergerak ke kanan
+                            speedY = 0;
+                            break;
+                        case 3: // Muncul dari KANAN
+                            startX = w + 50;
+                            startY = Math.random() * h;
+                            speedX = -speed; // Bergerak ke kiri
+                            speedY = 0;
+                            break;
+                    }
+
+                    bubbles.push({
+                        x: startX,
+                        y: startY,
+                        speedX: speedX,
+                        speedY: speedY,
+                        spawnTime: Date.now()
+                    });
+                }
+
+                // 2. Gerakkan Gelembung & Deteksi Kondisi Pecah
+                const bubblesToKeep = [];
+                for (const bubble of bubbles) {
+                    bubble.x += bubble.speedX;
+                    bubble.y += bubble.speedY;
+
+                    let bubblePopped = false;
+                    const bubbleRadius = 50;
+                    const waterEffectRadius = 45;
+
+                    if (results.multiHandLandmarks && results.multiHandedness) {
+                        for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                            const landmarks = results.multiHandLandmarks[i];
+                            const handedness = results.multiHandedness[i];
+                            const handLabel = handedness.label;
+                            
+                            // Variabel yang hilang sudah ditambahkan di sini
+                            let visualOffsetX = (handLabel === 'Right') ? 60 : -60;
+                            let hitboxOffsetX = (handLabel === 'Right') ? 60 : -60;
+
+                            const wrist = landmarks[0];
+                            const indexFingerBase = landmarks[5];
+                            const pinkyFingerBase = landmarks[17];
+                            const palmCenterX_normalized = (wrist.x + indexFingerBase.x + pinkyFingerBase.x) / 3;
+                            const palmCenterY_normalized = (wrist.y + indexFingerBase.y + pinkyFingerBase.y) / 3;
+
+                            const palmCenterX_hitbox = (1 - palmCenterX_normalized) * w + visualOffsetX + hitboxOffsetX;
+                            const palmCenterY_hitbox = palmCenterY_normalized * h;
+
+                            const dist = Math.sqrt(Math.pow(palmCenterX_hitbox - (w - bubble.x), 2) + Math.pow(palmCenterY_hitbox - bubble.y, 2));
+
+                            if (dist < bubbleRadius + waterEffectRadius) {
+                                bubblePopped = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (bubblePopped) {
+                        score += 10;
+                    } else if (bubble.y < -50 || bubble.y > h + 50 || bubble.x < -50 || bubble.x > w + 50) { // Cek jika keluar dari semua sisi
+                        lives -= 1;
+                    } else {
+                        bubblesToKeep.push(bubble);
+                    }
+                }
+                bubbles = bubblesToKeep;
+
+                if (lives <= 0) {
+                    gameOver = true;
+                    lives = 0;
+                }
+            }
+            
+            // --- GAMBAR SEMUA ELEMEN ---
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, w, h);
+            canvasCtx.scale(-1, 1);
+            canvasCtx.translate(-w, 0);
+            
+            // 1. Gambar Video
+            const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
+            const canvasRatio = w / h;
+            let drawWidth = w, drawHeight = h;
+            if (videoRatio > canvasRatio) drawHeight = w / videoRatio; else drawWidth = h * videoRatio;
+            canvasCtx.drawImage(results.image, (w - drawWidth) / 2, (h - drawHeight) / 2, drawWidth, drawHeight);
+
+            // 2. Gambar Gelembung
+            for (const bubble of bubbles) {
+                drawBubble(canvasCtx, bubble);
+            }
+            
+            // 3. Gambar Kerangka & Efek Air Tangan
+            if (results.multiHandLandmarks && results.multiHandedness) {
+                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                    const landmarks = results.multiHandLandmarks[i];
+
+                    // Gambar Kerangka (Debugging)
+                    {# window.drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS, { color: '#FFFFFF', lineWidth: 5 });
+                    window.drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 2 }); #}
+
+                    // Gambar Efek Air dengan Offset
+                    const handedness = results.multiHandedness[i];
+                    const handLabel = handedness.label;
+                    
+                    let offsetX = 0;
+                    if (handLabel === 'Right') {
+                        offsetX = -60; // Tangan kanan asli (di kiri layar), geser ke kiri
+                    } else { // 'Left'
+                        offsetX = +60;  // Tangan kiri asli (di kanan layar), geser ke kanan
+                    }
+
+                    const wrist = landmarks[0];
+                    const indexFingerBase = landmarks[5];
+                    const pinkyFingerBase = landmarks[17];
+
+                    const palmCenterX_normalized = (wrist.x + indexFingerBase.x + pinkyFingerBase.x) / 3;
+                    const palmCenterY_normalized = (wrist.y + indexFingerBase.y + pinkyFingerBase.y) / 3;
+
+                    const palmCenterX = palmCenterX_normalized * w + offsetX;
+                    const palmCenterY = palmCenterY_normalized * h;
+                    
+                    const waterEffectSize = 120;
+                    canvasCtx.drawImage(waterEffectImage, palmCenterX - waterEffectSize / 2, palmCenterY - waterEffectSize / 2, waterEffectSize, waterEffectSize);
+                }
+            }
+
+            canvasCtx.restore();
+
+            // --- GAMBAR SEMUA UI STATIS (TIDAK BERUBAH) ---
+            const panelWidth = 160;
+            const panelHeight = 420;
+            const panelX = w - panelWidth - 180;
+            const panelY = h / 2 - panelHeight / 2;
+            canvasCtx.drawImage(scorePanelImage, panelX, panelY, panelWidth, panelHeight);
+
+            const formattedScore = String(score).padStart(2, '0');
+            canvasCtx.fillStyle = '#FFFFFF';
+            canvasCtx.font = 'bold 48px sans-serif'; 
+            canvasCtx.textAlign = 'center'; 
+            canvasCtx.fillText(formattedScore, panelX + (panelWidth / 2) + 30, panelY - 20);
+            canvasCtx.textAlign = 'left'; 
+
+            const lifeIconWidth = 70;
+            const lifeIconHeight = 90;
+            const padding = 20;
+            const startX = 60; 
+            const startY = 50;
+            const spacing = 5;
+            for (let i = 0; i < lives; i++) {
+                canvasCtx.drawImage(lifeConeImage, startX + (i * (lifeIconWidth + spacing)), startY, lifeIconWidth, lifeIconHeight);
+            }
+
+            if (gameOver) {
+                canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                canvasCtx.fillRect(0, h / 2 - 60, w, 120);
+                canvasCtx.fillStyle = 'white';
+                canvasCtx.textAlign = 'center';
+                canvasCtx.font = 'bold 50px sans-serif';
+                canvasCtx.fillText('GAME OVER', w / 2, h / 2);
+                canvasCtx.font = '30px sans-serif';
+                canvasCtx.fillText(`Skor Akhir: ${score}`, w / 2, h / 2 + 40);
+                canvasCtx.textAlign = 'left';
+            }
+        
+        }
+
+        function startGame() {
+            score = 0; lives = 3; gameOver = false; gameStarted = false;
+            bubbles = [];
+            
+            loadingContainer.classList.remove('hidden');
+            gameWrapper.classList.add('hidden');
+
+            if (!hands) {
+                hands = new window.Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+                });
+                hands.setOptions({ maxNumHands: 2, modelComplexity: 0, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+                hands.onResults(onResults);
+            }
+            if (!camera) {
+                camera = new window.Camera(videoElement, {
+                    onFrame: async () => await hands.send({ image: videoElement }),
+                    width: 1280, height: 720,
+                });
+            }
+            
+            camera.start().catch(err => {
+                loadingText.innerText = 'Gagal mengakses kamera. Pastikan diizinkan.';
+            });
+        }
+
+        function stopGame() {
+            if (camera) {
+                camera.stop();
+            }
+        }
+    </script>
+</body>
+</html>
+
