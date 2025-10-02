@@ -122,6 +122,21 @@ docker-compose down --rmi all
     └── papan.html
 ```
 
+## Important Notes
+
+### Camera Access Requirements
+
+The games (especially Gelembung/Bubble game) require camera access for hand tracking using MediaPipe. Modern browsers have security restrictions:
+
+- **Localhost Access**: Camera works on `http://localhost:5000` or `http://127.0.0.1:5000`
+- **Remote Access**: Requires HTTPS with valid SSL certificate
+- **HTTP Remote Access**: Browsers block camera access over HTTP on remote IPs for security reasons
+
+If you see "No navigator.mediaDevices.getUserMedia exists" error when accessing via remote IP (e.g., http://46.250.233.166:5000), you need to either:
+1. Access via localhost if testing locally
+2. Set up HTTPS with SSL certificates for production deployment
+3. Use a reverse proxy like Nginx with SSL/TLS
+
 ## Troubleshooting
 
 ### Port already in use

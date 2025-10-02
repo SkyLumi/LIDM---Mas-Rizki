@@ -21,7 +21,14 @@
             transition: opacity 0.5s ease-in-out, visibility 0.5s;
         }
         .hidden { display: none; }
-        #gameCanvas { width: 100%; height: 100%; object-fit: cover; }
+        #gameCanvas { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover;
+        }
+        #webcam {
+            transform: scaleX(-1);
+        }
         .loader {
             border: 8px solid #f3f3f3; border-top: 8px solid #3498db;
             border-radius: 50%; width: 60px; height: 60px;
@@ -40,7 +47,7 @@
     <!-- ======================== -->
     <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
     <!-- ======================== -->
-    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='eskrim_img/mainMenuPage.png') }}');">
+    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/background.png') }}');">
         <div class="relative w-full h-full flex items-center justify-center">
             
             <!-- Panel Menu Utama -->
@@ -69,25 +76,25 @@
     <!-- ======================== -->
     <!--   LAYAR 1.5: PILIH LEVEL  -->
     <!-- ======================== -->
-    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='eskrim_img/backgroundLevelMenu.png') }}');">
+    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/background.png') }}');">
         
         <!-- Wrapper 'relative' yang mengisi seluruh layar untuk menjadi acuan posisi absolut -->
         <div class="relative w-full h-full">
             
             <!-- Box Level, diposisikan absolut di atas-tengah. Jarak dari atas diubah jadi 15% -->
-            <div class="absolute left-1/2 -translate-x-1/2 w-10/12 max-w-2xl">
-                <img src="{{ url_for('static', filename='eskrim_img/levelBox.png') }}" alt="Pilih Level Box" class="w-full">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10/12 max-w-2xl">
+                <img src="{{ url_for('static', filename='gelembung_img/levelbox.png') }}" alt="Pilih Level Box" class="w-full">
                 
                 <!-- Container Tombol Level, dibuat 'absolute' agar menimpa gambar box -->
                 <div class="absolute inset-0 flex justify-center items-end gap-6 lg:pb-40">
                     <button id="level-1-btn" class="transform hover:scale-110 transition-transform duration-200">
-                        <img src="{{ url_for('static', filename='eskrim_img/level1btn.png') }}" alt="Level 1" class="w-24 md:w-32">
+                        <img src="{{ url_for('static', filename='gelembung_img/level1btn.png') }}" alt="Level 1" class="w-24 md:w-32">
                     </button>
                     <button id="level-2-btn" class="cursor-not-allowed" disabled>
-                        <img src="{{ url_for('static', filename='eskrim_img/levelLockedbtn.png') }}" alt="Level 2 Locked" class="w-24 md:w-32 opacity-50">
+                        <img src="{{ url_for('static', filename='gelembung_img/levellock.png') }}" alt="Level 2 Locked" class="w-24 md:w-32 opacity-50">
                     </button>
                     <button id="level-3-btn" class="cursor-not-allowed" disabled>
-                        <img src="{{ url_for('static', filename='eskrim_img/levelLockedbtn.png') }}" alt="Level 3 Locked" class="w-24 md:w-32 opacity-50">
+                        <img src="{{ url_for('static', filename='gelembung_img/levellock.png') }}" alt="Level 3 Locked" class="w-24 md:w-32 opacity-50">
                     </button>
                 </div>
             </div>
@@ -154,19 +161,48 @@
         const gameWrapper = document.getElementById('game-wrapper');
 
         let score, lives, gameOver, gameStarted, bubbles, lastBubbleSpawnTime, hands, camera;
+        let gameWon = false;
+        let gameWonAnimationY = -500; // Posisi awal animasi (di atas layar)
+        let gameWonAnimationStartTime = 0;
+        let gameStartTime = 0;
+        let elapsedSeconds = 0;
+        let countdownActive = false;
+        let countdownStartTime = 0;
+        let countdownNumber = 3;
 
         // --- ASET GAMBAR ---
         let bubbleImage = new Image();
         bubbleImage.src = "{{ url_for('static', filename='gelembung_img/gelembung.png') }}"; // Pastikan nama file dan folder benar
 
         let scorePanelImage = new Image();
-        scorePanelImage.src = "{{ url_for('static', filename='eskrim_img/scorePanel.png') }}";
+        scorePanelImage.src = "{{ url_for('static', filename='gelembung_img/scorepanel.png') }}";
 
         let lifeConeImage = new Image();
-        lifeConeImage.src = "{{ url_for('static', filename='eskrim_img/life-cone-icon.png') }}";
+        lifeConeImage.src = "{{ url_for('static', filename='gelembung_img/life.png') }}";
 
         let waterEffectImage = new Image();
         waterEffectImage.src = "{{ url_for('static', filename='gelembung_img/efek-air.png') }}";
+
+        let waterBottomImage = new Image();
+        waterBottomImage.src = "{{ url_for('static', filename='gelembung_img/air.png') }}";
+
+        let scoreFillImage = new Image();
+        scoreFillImage.src = "{{ url_for('static', filename='gelembung_img/scorefill.png') }}";
+
+        let gameOverImage = new Image();
+        gameOverImage.src = "{{ url_for('static', filename='gelembung_img/gameover.png') }}";
+
+        let timerImage = new Image();
+        timerImage.src = "{{ url_for('static', filename='gelembung_img/timer.png') }}";
+
+        let countdownThreeImage = new Image();
+        countdownThreeImage.src = "{{ url_for('static', filename='gelembung_img/Three.png') }}";
+
+        let countdownTwoImage = new Image();
+        countdownTwoImage.src = "{{ url_for('static', filename='gelembung_img/Two.png') }}";
+
+        let countdownOneImage = new Image();
+        countdownOneImage.src = "{{ url_for('static', filename='gelembung_img/One.png') }}";
 
 
         // --- FUNGSI-FUNGSI GAMBAR ---
@@ -190,14 +226,35 @@
                 gameStarted = true;
                 loadingContainer.classList.add('hidden');
                 gameWrapper.classList.remove('hidden');
+                // Mulai countdown
+                countdownActive = true;
+                countdownStartTime = Date.now();
+                countdownNumber = 3;
             }
             if (!gameStarted) return;
 
             const w = canvasElement.width;
             const h = canvasElement.height;
 
+            // --- UPDATE COUNTDOWN ---
+            if (countdownActive) {
+                const countdownElapsed = Date.now() - countdownStartTime;
+                const currentCountdown = 3 - Math.floor(countdownElapsed / 1000);
+                
+                if (currentCountdown > 0) {
+                    countdownNumber = currentCountdown;
+                } else if (currentCountdown === 0) {
+                    countdownNumber = 0;
+                    // Countdown selesai, mulai game
+                    if (countdownElapsed >= 3000) {
+                        countdownActive = false;
+                        gameStartTime = Date.now();
+                    }
+                }
+            }
+
             // --- UPDATE LOGIKA GAME ---
-            if (!gameOver) {
+            if (!gameOver && !countdownActive) {
                 // 1. Munculkan Gelembung Baru (jika tidak ada gelembung di layar)
                 if (bubbles.length === 0) {
                     let startX, startY, speedX, speedY;
@@ -248,30 +305,42 @@
 
                     let bubblePopped = false;
                     const bubbleRadius = 50;
-                    const waterEffectRadius = 45;
+                    const waterEffectRadius = 60; // Diperbesar untuk deteksi lebih mudah
 
                     if (results.multiHandLandmarks && results.multiHandedness) {
                         for (let i = 0; i < results.multiHandLandmarks.length; i++) {
                             const landmarks = results.multiHandLandmarks[i];
-                            const handedness = results.multiHandedness[i];
-                            const handLabel = handedness.label;
-                            
-                            // Variabel yang hilang sudah ditambahkan di sini
-                            let visualOffsetX = (handLabel === 'Right') ? 60 : -60;
-                            let hitboxOffsetX = (handLabel === 'Right') ? 60 : -60;
 
-                            const wrist = landmarks[0];
+                            // Hitung pusat telapak tangan (sama seperti untuk gambar air)
                             const indexFingerBase = landmarks[5];
+                            const middleFingerBase = landmarks[9];
+                            const ringFingerBase = landmarks[13];
                             const pinkyFingerBase = landmarks[17];
-                            const palmCenterX_normalized = (wrist.x + indexFingerBase.x + pinkyFingerBase.x) / 3;
-                            const palmCenterY_normalized = (wrist.y + indexFingerBase.y + pinkyFingerBase.y) / 3;
 
-                            const palmCenterX_hitbox = (1 - palmCenterX_normalized) * w + visualOffsetX + hitboxOffsetX;
-                            const palmCenterY_hitbox = palmCenterY_normalized * h;
+                            const palmCenterX_normalized = (indexFingerBase.x + middleFingerBase.x + ringFingerBase.x + pinkyFingerBase.x) / 4;
+                            const palmCenterY_normalized = (indexFingerBase.y + middleFingerBase.y + ringFingerBase.y + pinkyFingerBase.y) / 4;
 
-                            const dist = Math.sqrt(Math.pow(palmCenterX_hitbox - (w - bubble.x), 2) + Math.pow(palmCenterY_hitbox - bubble.y, 2));
+                            // Koordinat tangan - dalam sistem koordinat yang sudah di-mirror (untuk visual)
+                            const palmCenterX_visual = palmCenterX_normalized * w;
+                            const palmCenterY_visual = palmCenterY_normalized * h;
+                            
+                            // Untuk collision, gunakan koordinat visual yang sama (TIDAK perlu konversi)
+                            // Karena gelembung juga menggunakan koordinat dalam sistem yang sama
+                            const palmCenterX_hitbox = palmCenterX_visual;
+                            const palmCenterY_hitbox = palmCenterY_visual;
+
+                            // Koordinat gelembung - dalam sistem koordinat yang sama dengan tangan
+                            const bubbleX_hitbox = bubble.x;
+                            const bubbleY_hitbox = bubble.y;
+                            
+                            // Hitung jarak
+                            const dist = Math.sqrt(Math.pow(palmCenterX_hitbox - bubbleX_hitbox, 2) + Math.pow(palmCenterY_hitbox - bubbleY_hitbox, 2));
+
+                            // Debug: AKTIF untuk melihat nilai
+                            console.log(`Hand: (${palmCenterX_hitbox.toFixed(0)}, ${palmCenterY_hitbox.toFixed(0)}), Bubble: (${bubbleX_hitbox.toFixed(0)}, ${bubbleY_hitbox.toFixed(0)}), Dist: ${dist.toFixed(0)}, Threshold: ${(bubbleRadius + waterEffectRadius)}`);
 
                             if (dist < bubbleRadius + waterEffectRadius) {
+                                console.log('BUBBLE POPPED!');
                                 bubblePopped = true;
                                 break;
                             }
@@ -280,6 +349,11 @@
 
                     if (bubblePopped) {
                         score += 10;
+                        // Cek jika skor mencapai 100 atau lebih
+                        if (score >= 100 && !gameWon) {
+                            gameWon = true;
+                            gameWonAnimationStartTime = Date.now();
+                        }
                     } else if (bubble.y < -50 || bubble.y > h + 50 || bubble.x < -50 || bubble.x > w + 50) { // Cek jika keluar dari semua sisi
                         lives -= 1;
                     } else {
@@ -297,63 +371,115 @@
             // --- GAMBAR SEMUA ELEMEN ---
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, w, h);
-            canvasCtx.scale(-1, 1);
-            canvasCtx.translate(-w, 0);
             
-            // 1. Gambar Video
+            // 1. Gambar Video FULL SCREEN dengan cover behavior dan mirror effect
             const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
             const canvasRatio = w / h;
-            let drawWidth = w, drawHeight = h;
-            if (videoRatio > canvasRatio) drawHeight = w / videoRatio; else drawWidth = h * videoRatio;
-            canvasCtx.drawImage(results.image, (w - drawWidth) / 2, (h - drawHeight) / 2, drawWidth, drawHeight);
+            let drawWidth, drawHeight;
+            let offsetX = 0, offsetY = 0;
+            
+            // Hitung ukuran untuk mengisi penuh layar (cover behavior)
+            if (videoRatio > canvasRatio) {
+                // Video lebih lebar, fit ke tinggi dan crop samping
+                drawHeight = h;
+                drawWidth = h * videoRatio;
+                offsetX = (drawWidth - w) / 2;
+            } else {
+                // Video lebih tinggi, fit ke lebar dan crop atas/bawah
+                drawWidth = w;
+                drawHeight = w / videoRatio;
+                offsetY = (drawHeight - h) / 2;
+            }
+            
+            // Flip horizontal untuk mirror effect pada video
+            canvasCtx.save();
+            canvasCtx.scale(-1, 1);
+            canvasCtx.translate(-w, 0);
+            canvasCtx.drawImage(results.image, -offsetX, -offsetY, drawWidth, drawHeight);
+            canvasCtx.restore();
 
-            // 2. Gambar Gelembung
+            // 2. Gambar Gelembung dengan mirror
+            canvasCtx.save();
+            canvasCtx.scale(-1, 1);
+            canvasCtx.translate(-w, 0);
             for (const bubble of bubbles) {
                 drawBubble(canvasCtx, bubble);
             }
+            canvasCtx.restore();
             
-            // 3. Gambar Kerangka & Efek Air Tangan
+            // 3. Gambar Kerangka & Efek Air Tangan dengan mirror
             if (results.multiHandLandmarks && results.multiHandedness) {
+                canvasCtx.save();
+                canvasCtx.scale(-1, 1);
+                canvasCtx.translate(-w, 0);
+                
                 for (let i = 0; i < results.multiHandLandmarks.length; i++) {
                     const landmarks = results.multiHandLandmarks[i];
 
-                    // Gambar Kerangka (Debugging)
-                    {# window.drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS, { color: '#FFFFFF', lineWidth: 5 });
-                    window.drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 2 }); #}
+                    // Gambar Kerangka (Debugging) - Uncomment jika perlu debug
+                    // window.drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS, { color: '#FFFFFF', lineWidth: 5 });
+                    // window.drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 2 });
 
-                    // Gambar Efek Air dengan Offset
-                    const handedness = results.multiHandedness[i];
-                    const handLabel = handedness.label;
-                    
-                    let offsetX = 0;
-                    if (handLabel === 'Right') {
-                        offsetX = -60; // Tangan kanan asli (di kiri layar), geser ke kiri
-                    } else { // 'Left'
-                        offsetX = +60;  // Tangan kiri asli (di kanan layar), geser ke kanan
-                    }
-
+                    // Gambar Efek Air di tengah telapak tangan
                     const wrist = landmarks[0];
                     const indexFingerBase = landmarks[5];
+                    const middleFingerBase = landmarks[9];
+                    const ringFingerBase = landmarks[13];
                     const pinkyFingerBase = landmarks[17];
 
-                    const palmCenterX_normalized = (wrist.x + indexFingerBase.x + pinkyFingerBase.x) / 3;
-                    const palmCenterY_normalized = (wrist.y + indexFingerBase.y + pinkyFingerBase.y) / 3;
+                    // Hitung pusat telapak tangan dengan lebih akurat
+                    const palmCenterX_normalized = (indexFingerBase.x + middleFingerBase.x + ringFingerBase.x + pinkyFingerBase.x) / 4;
+                    const palmCenterY_normalized = (indexFingerBase.y + middleFingerBase.y + ringFingerBase.y + pinkyFingerBase.y) / 4;
 
-                    const palmCenterX = palmCenterX_normalized * w + offsetX;
+                    // Karena sudah di-mirror, koordinat X langsung digunakan
+                    const palmCenterX = palmCenterX_normalized * w;
                     const palmCenterY = palmCenterY_normalized * h;
                     
                     const waterEffectSize = 120;
                     canvasCtx.drawImage(waterEffectImage, palmCenterX - waterEffectSize / 2, palmCenterY - waterEffectSize / 2, waterEffectSize, waterEffectSize);
                 }
+                
+                canvasCtx.restore();
             }
 
             canvasCtx.restore();
 
+            // 4. Gambar Air di Bawah Layar
+            const waterBottomHeight = 150; // Tinggi gambar air
+            const waterBottomWidth = w; // Lebar penuh layar
+            canvasCtx.drawImage(waterBottomImage, 0, h - waterBottomHeight, waterBottomWidth, waterBottomHeight);
+
             // --- GAMBAR SEMUA UI STATIS (TIDAK BERUBAH) ---
-            const panelWidth = 160;
+            const panelWidth = 120;
             const panelHeight = 420;
-            const panelX = w - panelWidth - 180;
+            const panelX = w - panelWidth - 140;
             const panelY = h / 2 - panelHeight / 2;
+            
+            // Gambar Score Fill (progress bar) di belakang panel
+            const maxScore = 100;
+            const scorePercentage = Math.min(score / maxScore, 1);
+            
+            // Batasi tinggi maksimal fill (85% dari tinggi panel agar tidak melebihi)
+            const maxFillHeight = panelHeight * 0.85; // 85% dari tinggi panel
+            const fillHeight = maxFillHeight * scorePercentage;
+            
+            // Atur lebar scorefill (bisa disesuaikan)
+            const fillWidth = panelWidth * 0.65; // 65% dari lebar panel
+            const fillOffsetX = ((panelWidth - fillWidth) / 2) + 10; // Center horizontally
+            
+            // Offset dari bawah panel
+            const fillBottomOffset = -2; // Jarak dari bawah panel (diperbesar agar lebih ke bawah)
+            
+            if (scorePercentage > 0) {
+                canvasCtx.drawImage(
+                    scoreFillImage,
+                    0, scoreFillImage.height * (1 - scorePercentage),
+                    scoreFillImage.width, scoreFillImage.height * scorePercentage,
+                    panelX + fillOffsetX, panelY + (panelHeight - fillHeight - fillBottomOffset),
+                    fillWidth, fillHeight
+                );
+            }
+            
             canvasCtx.drawImage(scorePanelImage, panelX, panelY, panelWidth, panelHeight);
 
             const formattedScore = String(score).padStart(2, '0');
@@ -363,7 +489,7 @@
             canvasCtx.fillText(formattedScore, panelX + (panelWidth / 2) + 30, panelY - 20);
             canvasCtx.textAlign = 'left'; 
 
-            const lifeIconWidth = 70;
+            const lifeIconWidth = 100;
             const lifeIconHeight = 90;
             const padding = 20;
             const startX = 60; 
@@ -371,6 +497,75 @@
             const spacing = 5;
             for (let i = 0; i < lives; i++) {
                 canvasCtx.drawImage(lifeConeImage, startX + (i * (lifeIconWidth + spacing)), startY, lifeIconWidth, lifeIconHeight);
+            }
+
+            // Gambar Timer di pojok kanan atas
+            if (!gameOver && !gameWon) {
+                elapsedSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
+            }
+            
+            const timerWidth = 360;
+            const timerHeight = 180;
+            const timerX = w - timerWidth - 100;
+            const timerY = 20;
+            
+            canvasCtx.drawImage(timerImage, timerX, timerY, timerWidth, timerHeight);
+            
+            // Gambar text waktu di dalam timer box
+            canvasCtx.fillStyle = '#2C5F6F'; // Warna teal gelap sesuai gambar
+            canvasCtx.font = 'bold 36px sans-serif';
+            canvasCtx.textAlign = 'center';
+            canvasCtx.fillText(`Waktu : ${elapsedSeconds} detik`, timerX + (timerWidth / 2), timerY + (timerHeight / 2) + 50);
+            canvasCtx.textAlign = 'left';
+
+            if (countdownActive && countdownNumber > 0) {
+                let countdownImage;
+                if (countdownNumber === 3) {
+                    countdownImage = countdownThreeImage;
+                } else if (countdownNumber === 2) {
+                    countdownImage = countdownTwoImage;
+                } else if (countdownNumber === 1) {
+                    countdownImage = countdownOneImage;
+                }
+
+                if (countdownImage && countdownImage.complete) {
+                    const imgWidth = 200; // Lebar gambar countdown
+                    const imgHeight = 240; // Tinggi gambar countdown
+                    const imgX = (w - imgWidth) / 2; // Posisi X di tengah
+                    const imgY = (h - imgHeight) / 2; // Posisi Y di tengah
+                    
+                    // Beri sedikit efek bayangan
+                    canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    canvasCtx.fillRect(0, 0, w, h);
+
+                    // Gambar angka countdown
+                    canvasCtx.drawImage(countdownImage, imgX, imgY, imgWidth, imgHeight);
+                }
+            }
+
+            // Gambar Game Won overlay dengan animasi
+            if (gameWon) {
+                const animationDuration = 1000; // 1 detik untuk animasi turun
+                const elapsedTime = Date.now() - gameWonAnimationStartTime;
+                const progress = Math.min(elapsedTime / animationDuration, 1); // 0 to 1
+                
+                // Easing function (ease-out)
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                
+                // Hitung posisi Y (dari -500 ke 0)
+                gameWonAnimationY = -500 + (500 * easeOut);
+                
+                // Gambar overlay gelap
+                canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                canvasCtx.fillRect(0, 0, w, h);
+                
+                // Gambar gameover image dengan animasi dari atas
+                const gameOverWidth = w * 0.6; // 60% dari lebar layar
+                const gameOverHeight = gameOverWidth * (gameOverImage.height / gameOverImage.width); // Maintain aspect ratio
+                const gameOverX = (w - gameOverWidth) / 2;
+                const gameOverY = (h - gameOverHeight) / 2 + gameWonAnimationY;
+                
+                canvasCtx.drawImage(gameOverImage, gameOverX, gameOverY, gameOverWidth, gameOverHeight);
             }
 
             if (gameOver) {
@@ -389,6 +584,14 @@
 
         function startGame() {
             score = 0; lives = 3; gameOver = false; gameStarted = false;
+            gameWon = false;
+            gameWonAnimationY = -500;
+            gameWonAnimationStartTime = 0;
+            gameStartTime = 0;
+            elapsedSeconds = 0;
+            countdownActive = false;
+            countdownStartTime = 0;
+            countdownNumber = 3;
             bubbles = [];
             
             loadingContainer.classList.remove('hidden');
@@ -398,13 +601,13 @@
                 hands = new window.Hands({
                     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
                 });
-                hands.setOptions({ maxNumHands: 2, modelComplexity: 0, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+                hands.setOptions({ maxNumHands: 2, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5, staticImageMode: false, selfieMode: false });
                 hands.onResults(onResults);
             }
             if (!camera) {
                 camera = new window.Camera(videoElement, {
                     onFrame: async () => await hands.send({ image: videoElement }),
-                    width: 1280, height: 720,
+                    width: 640, height: 480,
                 });
             }
             
