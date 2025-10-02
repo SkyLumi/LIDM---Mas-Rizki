@@ -43,6 +43,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
+    <audio id="bgm" src="{{ url_for('static', filename='audio/gelembung.m4a') }}" loop></audio>
+
 
     <!-- ======================== -->
     <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
@@ -150,6 +152,7 @@
             levelScreen.classList.add('hidden');
             gameScreen.classList.remove('hidden');
             startGame();
+            bgm.play(); 
         });
 
         // --- Variabel & Referensi Game ---
@@ -159,6 +162,8 @@
         const loadingContainer = document.getElementById('loading-container');
         const loadingText = document.getElementById('loading-text');
         const gameWrapper = document.getElementById('game-wrapper');
+        const bgm = document.getElementById('bgm');
+
 
         let score, lives, gameOver, gameStarted, bubbles, lastBubbleSpawnTime, hands, camera;
         let gameWon = false;
@@ -560,7 +565,7 @@
                 canvasCtx.fillRect(0, 0, w, h);
                 
                 // Gambar gameover image dengan animasi dari atas
-                const gameOverWidth = w * 0.6; // 60% dari lebar layar
+                const gameOverWidth = w * 0.3; // 60% dari lebar layar
                 const gameOverHeight = gameOverWidth * (gameOverImage.height / gameOverImage.width); // Maintain aspect ratio
                 const gameOverX = (w - gameOverWidth) / 2;
                 const gameOverY = (h - gameOverHeight) / 2 + gameWonAnimationY;
@@ -619,6 +624,8 @@
         function stopGame() {
             if (camera) {
                 camera.stop();
+                bgm.pause();
+                bgm.currentTime = 0; 
             }
         }
     </script>
