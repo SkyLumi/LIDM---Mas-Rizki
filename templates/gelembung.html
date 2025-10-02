@@ -47,25 +47,25 @@
     <!-- ======================== -->
     <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
     <!-- ======================== -->
-    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/background.png') }}');">
+    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/bg.png') }}');">
         <div class="relative w-full h-full flex items-center justify-center">
             
             <!-- Panel Menu Utama -->
             <!-- TAMBAHKAN 'relative' DI SINI untuk menjadi acuan posisi tombol -->
             <div class="relative w-full max-w-8xl flex flex-col items-center">
-                <img src="{{ url_for('static', filename='eskrim_img/titleBox.png') }}" alt="Menu Utama" class="w-10/12 z-10">
+                <img src="{{ url_for('static', filename='gelembung_img/titleBox.png') }}" alt="Menu Utama" class="w-10/12 z-10">
 
                 <!-- Kontainer Tombol-Tombol -->
                 <!-- GANTI class positioningnya dengan 'absolute' -->
-                <div class="absolute bottom-12 md:bottom-8 left-0 right-0 flex justify-center gap-4 w-full z-20">
+                <div class="absolute bottom-12 md:bottom-16 left-0 right-0 flex justify-center gap-4 w-full z-20">
                     <button id="play-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
-                        <img src="{{ url_for('static', filename='eskrim_img/playButton.png') }}" alt="Play" class="pointer-events-none">
+                        <img src="{{ url_for('static', filename='gelembung_img/buttonplay.png') }}" alt="Play" class="pointer-events-none">
                     </button>
                     <button id="settings-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
-                        <img src="{{ url_for('static', filename='eskrim_img/pengaturanButton.png') }}" alt="Pengaturan" class="pointer-events-none">
+                        <img src="{{ url_for('static', filename='gelembung_img/buttonpengaturan.png') }}" alt="Pengaturan" class="pointer-events-none">
                     </button>
                     <button id="quit-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
-                        <img src="{{ url_for('static', filename='eskrim_img/keluarButton.png') }}" alt="Keluar" class="pointer-events-none">
+                        <img src="{{ url_for('static', filename='gelembung_img/buttonkeluar.png') }}" alt="Keluar" class="pointer-events-none">
                     </button>
                 </div>
             </div>
@@ -86,7 +86,7 @@
                 <img src="{{ url_for('static', filename='gelembung_img/levelbox.png') }}" alt="Pilih Level Box" class="w-full">
                 
                 <!-- Container Tombol Level, dibuat 'absolute' agar menimpa gambar box -->
-                <div class="absolute inset-0 flex justify-center items-end gap-6 lg:pb-40">
+                <div class="absolute inset-0 flex justify-center items-end gap-6 lg:pb-80">
                     <button id="level-1-btn" class="transform hover:scale-110 transition-transform duration-200">
                         <img src="{{ url_for('static', filename='gelembung_img/level1btn.png') }}" alt="Level 1" class="w-24 md:w-32">
                     </button>
