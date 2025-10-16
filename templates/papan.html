@@ -88,7 +88,17 @@
         </div>
     </div>
     
-    <div id="game-screen" class="screen hidden bg-gray-800">
+    <div id="tutorial-screen" class="screen hidden" style="background-color: rgba(0, 0, 0, 0.7);  z-index: 20;">
+        <div class="flex flex-col items-center gap-8 ">
+            <img src="{{ url_for('static', filename='gelembung_img/tutorial.png') }}" alt="Tutorial Cara Bermain" class="w-full">
+            
+            <button id="understand-btn" class="w-1/4 max-w-xs transform hover:scale-110 transition-transform duration-200">
+                <img src="{{ url_for('static', filename='gelembung_img/mulaiButton.png') }}" alt="Lanjutkan">
+            </button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen hidden bg-gray-800" style="z-index: 10;">
         <div id="loading-container" class="flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow-lg">
             <div class="loader"></div>
             <p id="loading-text" class="mt-4 text-gray-700 font-semibold">Menunggu akses kamera...</p>
@@ -108,15 +118,19 @@
         const menuScreen = document.getElementById('menu-screen');
         const gameScreen = document.getElementById('game-screen');
         const levelScreen = document.getElementById('level-screen')
+        const tutorialScreen = document.getElementById('tutorial-screen');
         const playBtn = document.getElementById('play-btn');
+        const understandBtn = document.getElementById('understand-btn');
         const level1Btn = document.getElementById('level-1-btn')
         const settingsBtn = document.getElementById('settings-btn');
         const quitBtn = document.getElementById('quit-btn');
         const exitGameBtn = document.getElementById('exit-game-btn');
+        let timeLeft = 3;
 
         playBtn.addEventListener('click', () => {
             menuScreen.classList.add('hidden');
             levelScreen.classList.remove('hidden');
+            openFullscreen() 
         });
         settingsBtn.addEventListener('click', () => alert('Halaman Pengaturan belum dibuat!'));
         quitBtn.addEventListener('click', () => alert('Tombol Keluar ditekan!'));
@@ -127,9 +141,16 @@
         });
         level1Btn.addEventListener('click', () => {
             levelScreen.classList.add('hidden');
+            tutorialScreen.classList.remove('hidden');
             gameScreen.classList.remove('hidden');
             startGame();
         });
+
+        understandBtn.addEventListener('click', () => {
+            tutorialScreen.classList.add('hidden');
+            gameStarted = true;
+        });
+
 
         // --- Variabel & Referensi Game ---
         const videoElement = document.getElementById('webcam');
@@ -151,9 +172,25 @@
         dispenserImage.src = "{{ url_for('static', filename='papan_img/dropPointandGear.png') }}";
         let hiasanPojokImage = new Image();
         hiasanPojokImage.src = "{{ url_for('static', filename='papan_img/leftbar.png') }}";
+        let countdown3Image = new Image();
+        countdown3Image.src = "{{ url_for('static', filename='papan_img/3.png') }}";
+        let countdown2Image = new Image();
+        countdown2Image.src = "{{ url_for('static', filename='papan_img/2.png') }}";
+        let countdown1Image = new Image();
+        countdown1Image.src = "{{ url_for('static', filename='papan_img/1.png') }}";
+        let countdownGoImage = new Image();
+        countdownGoImage.src = "{{ url_for('static', filename='papan_img/GO.png') }}";
 
 
         let score, gameOver, gameStarted, hands, camera, plank, ball, basket, dispenser, physicsConstants, hiasanAnimasi, hiasanSequenceIndex;
+
+        function openFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) elem.requestFullscreen();
+            else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+        }
 
         // --- Fungsi-fungsi Gambar ---
         function drawPlank(ctx, p) {
@@ -305,7 +342,6 @@
             if (!gameStarted && videoElement.readyState >= 3) { // DIUBAH: Cek video sudah siap
                 canvasElement.width = window.innerWidth;
                 canvasElement.height = window.innerHeight;
-                gameStarted = true;
                 loadingContainer.classList.add('hidden');
                 gameWrapper.classList.remove('hidden');
             }

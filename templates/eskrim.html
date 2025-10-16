@@ -94,7 +94,15 @@
         </div>
     </div>
 
-    
+    <div id="tutorial-screen" class="screen hidden" style="background-color: rgba(0, 0, 0, 0.7);  z-index: 20;">
+        <div class="flex flex-col items-center gap-8 ">
+            <img src="{{ url_for('static', filename='eskrim_img/tutorial.png') }}" alt="Tutorial Cara Bermain" class="w-full">
+            
+            <button id="understand-btn" class="w-1/4 max-w-xs transform hover:scale-110 transition-transform duration-200">
+                <img src="{{ url_for('static', filename='eskrim_img/mulaiButton.png') }}" alt="Lanjutkan">
+            </button>
+        </div>
+    </div>
 
     <!-- ======================== -->
     <!--     LAYAR 2: COUNTDOWN     -->
@@ -108,7 +116,7 @@
     <!-- ======================== -->
     <!--     LAYAR 3: GAMEPLAY      -->
     <!-- ======================== -->
-    <div id="game-screen" class="screen hidden bg-black">
+    <div id="game-screen" class="screen hidden bg-black" style="z-index: 10;">
         <div id="loading-container" class="flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow-lg">
             <div class="loader"></div>
             <p id="loading-text" class="mt-4 text-gray-700 font-semibold">Menunggu akses kamera...</p>
@@ -131,6 +139,7 @@
         const menuScreen = document.getElementById('menu-screen');
         const gameScreen = document.getElementById('game-screen');
         const levelScreen = document.getElementById('level-screen');
+        const tutorialScreen = document.getElementById('tutorial-screen');
         const countdownScreen = document.getElementById('countdown-screen');
         const countdownImage = document.getElementById('countdown-image');
         const playBtn = document.getElementById('play-btn');
@@ -138,10 +147,12 @@
         const settingsBtn = document.getElementById('settings-btn');
         const quitBtn = document.getElementById('quit-btn');
         const exitGameBtn = document.getElementById('exit-game-btn');
+        const understandBtn = document.getElementById('understand-btn');
 
         playBtn.addEventListener('click', () => {
             menuScreen.classList.add('hidden');
             levelScreen.classList.remove('hidden');
+            openFullscreen();
         });
 
         settingsBtn.addEventListener('click', () => {
@@ -160,8 +171,17 @@
 
         level1Btn.addEventListener('click', () => {
             levelScreen.classList.add('hidden');
-            gameScreen.classList.remove('hidden');
-            startGame();
+            tutorialScreen.classList.remove('hidden');
+            gameScreen.classList.remove('hidden'); 
+            startGame();  
+        });
+
+        understandBtn.addEventListener('click', () => {
+            tutorialScreen.classList.add('hidden');
+            isTutorialActive = false;
+            countdownActive = true;
+            countdownStartTime = Date.now();
+            countdownStep = 0;
         });
 
         // --- Variabel & Referensi Game ---
@@ -173,9 +193,10 @@
         const gameWrapper = document.getElementById('game-wrapper');
 
         let score, lives, gameOver, gameStarted, iceCreams, lastSpawnTime, currentConePos, hands, camera, dispenser;
+        let isTutorialActive = false; 
         let countdownActive = false;
         let countdownStartTime = 0;
-        let countdownStep = 0; // 0=3, 1=2, 2=1, 3=GO
+        let countdownStep = 0;
         
         // Game Over Panel Animation Variables
         let gameOverPanelActive = false;
@@ -241,6 +262,18 @@
         let fillIceCreamBarImage = new Image();
         fillIceCreamBarImage.src = "{{ url_for('static', filename='eskrim_img/Fillicecreambar.png') }}";
 
+        function openFullscreen() {
+            const elem = document.documentElement; // Target elemen adalah seluruh halaman (<html>)
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.mozRequestFullScreen) { // Firefox
+                elem.mozRequestFullScreen();
+            } else if (elem.webkitRequestFullscreen) { // Chrome, Safari and Opera
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { // IE/Edge
+                elem.msRequestFullscreen();
+            }
+        }
 
         // --- Fungsi-fungsi Gambar ---
         function drawCone(ctx, position) {
@@ -357,57 +390,52 @@
                 canvasElement.height = window.innerHeight;
                 gameStarted = true;
                 loadingContainer.classList.add('hidden');
-                gameWrapper.classList.remove('hidden');
-                
-                // Start countdown
-                countdownActive = true;
-                countdownStartTime = Date.now();
-                countdownStep = 0;
+                gameWrapper.classList.remove('hidden');                
             }
 
-            if (!gameStarted) return;
+            if (!gameStarted) return;                
+                // Draw countdown overlay
+            const w = canvasElement.width;
+            const h = canvasElement.height;
+                
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, w, h);
+                
+                // Fullscreen camera dengan aspect ratio yang benar (tidak stretch, tidak flip)
+            const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
+            const canvasRatio = w / h;
+            let drawWidth = w, drawHeight = h;
+                
+            if (videoRatio > canvasRatio) {
+                // Video lebih lebar, fit ke tinggi canvas
+                drawHeight = h;
+                drawWidth = h * videoRatio;
+            } else {
+                // Video lebih tinggi, fit ke lebar canvas
+                drawWidth = w;
+                drawHeight = w / videoRatio;
+            }
+                
+            canvasCtx.drawImage(results.image, (w - drawWidth) / 2, (h - drawHeight) / 2, drawWidth, drawHeight);
+                
+            if (isTutorialActive) {
+                canvasCtx.restore();
+                return;
+            }
 
-            // Handle countdown
             if (countdownActive) {
                 const now = Date.now();
                 const elapsed = now - countdownStartTime;
                 
-                if (elapsed >= 1000) { // 1 second per step
+                if (elapsed >= 1000) {
                     countdownStep++;
                     countdownStartTime = now;
                     
-                    if (countdownStep >= 4) { // After GO (step 3)
+                    if (countdownStep >= 4) {
                         countdownActive = false;
-                        lastSpawnTime = Date.now(); // Reset spawn timer
+                        lastSpawnTime = Date.now();
                     }
                 }
-                
-                // Draw countdown overlay
-                const w = canvasElement.width;
-                const h = canvasElement.height;
-                
-                canvasCtx.save();
-                canvasCtx.clearRect(0, 0, w, h);
-                
-                // Fullscreen camera dengan aspect ratio yang benar (tidak stretch, tidak flip)
-                const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
-                const canvasRatio = w / h;
-                let drawWidth = w, drawHeight = h;
-                
-                if (videoRatio > canvasRatio) {
-                    // Video lebih lebar, fit ke tinggi canvas
-                    drawHeight = h;
-                    drawWidth = h * videoRatio;
-                } else {
-                    // Video lebih tinggi, fit ke lebar canvas
-                    drawWidth = w;
-                    drawHeight = w / videoRatio;
-                }
-                
-                canvasCtx.drawImage(results.image, (w - drawWidth) / 2, (h - drawHeight) / 2, drawWidth, drawHeight);
-                
-                canvasCtx.restore();
-                
                 // Draw countdown image
                 let countdownImg;
                 switch (countdownStep) {
@@ -441,12 +469,10 @@
                         displayHeight
                     );
                 }
-                
+
+                canvasCtx.restore();
                 return; // Don't run game logic during countdown
             }
-
-            const w = canvasElement.width;
-            const h = canvasElement.height;
 
             if (dispenser && dispenser.x === null) {
                 dispenser.x = w / 2;
@@ -457,13 +483,8 @@
                 currentConePos = { x: w / 2, y: h - 100 };
             }
 
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, w, h);
-            
-            // Fullscreen camera dengan aspect ratio yang benar (tidak stretch, tidak flip)
-            const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
-            const canvasRatio = w / h;
-            let drawWidth = w, drawHeight = h;
+            // canvasCtx.save();
+            // canvasCtx.clearRect(0, 0, w, h);
             
             if (videoRatio > canvasRatio) {
                 // Video lebih lebar, fit ke tinggi canvas
@@ -749,15 +770,16 @@
         }
 
         function startGame() {
+            isTutorialActive = true
             // Reset state game
             score = 0; lives = 3; gameOver = false; gameStarted = false;
             iceCreams = []; currentConePos = null;
             lastSpawnTime = Date.now();
             
-            // Reset countdown state
-            countdownActive = false;
-            countdownStartTime = 0;
-            countdownStep = 0;
+            // // Reset countdown state
+            // countdownActive = false;
+            // countdownStartTime = 0;
+            // countdownStep = 0;
             
             // Reset game over panel state
             gameOverPanelActive = false;

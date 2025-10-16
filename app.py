@@ -29,6 +29,11 @@ def papan_game():
     """Menampilkan halaman game."""
     return render_template('papan.html')
 
+@app.route('/kartu-game')
+def kartu_game():
+    """Menampilkan halaman game."""
+    return render_template('kartu.html')
+
 # Menjalankan server saat script dieksekusi
 if __name__ == '__main__':
     # Debug=True agar server otomatis restart saat ada perubahan kode
