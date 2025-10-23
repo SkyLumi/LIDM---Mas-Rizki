@@ -70,7 +70,18 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <audio id="bgm" src="{{ url_for('static', filename='audio/gelembung.m4a') }}" loop></audio>
+    <audio id="bgm-mainmenu" src="{{ url_for('static', filename='audio/gelembung-mainmenu.m4a') }}" loop></audio>
+    <audio id="bgm-bglose" src="{{ url_for('static', filename='audio/gelembung-bglose.m4a') }}" loop></audio>
+    <audio id="bgm-bgwin" src="{{ url_for('static', filename='audio/gelembung-bgwin.m4a') }}" loop></audio>
+    <audio id="bgm-closebtn" src="{{ url_for('static', filename='audio/gelembung-close-click.m4a') }}"></audio>
+    <audio id="bgm-gameplay" src="{{ url_for('static', filename='audio/gelembung-gameplay.m4a') }}" loop></audio>
+    <audio id="bgm-level-click" src="{{ url_for('static', filename='audio/gelembung-level-click.m4a') }}"></audio>
+    <audio id="bgm-level-hover" src="{{ url_for('static', filename='audio/gelembung-level-hover.m4a') }}"></audio>
+    <audio id="bgm-playbtn" src="{{ url_for('static', filename='audio/gelembung-playbutton.m4a') }}"></audio>
+    <audio id="bgm-menubtn-click" src="{{ url_for('static', filename='audio/gelembung-sfxmenubtn-click.m4a') }}"></audio>
+    <audio id="bgm-menubtn-hover" src="{{ url_for('static', filename='audio/gelembung-sfxmenubtn-hover.m4a') }}"></audio>
+    <audio id="bgm-sfxwin" src="{{ url_for('static', filename='audio/gelembung-sfxwin.m4a') }}"></audio>
+    <audio id="bgm-sfxstartgame" src="{{ url_for('static', filename='audio/gelembung-startgame.m4a') }}"></audio>
 
     <!-- ======================== -->
     <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
@@ -134,7 +145,7 @@
 
     <div id="tutorial-screen" class="screen hidden" style="background-color: rgba(0, 0, 0, 0.7);  z-index: 20;">
         <div class="flex flex-col items-center gap-8 ">
-            <img src="{{ url_for('static', filename='gelembung_img/tutorial.png') }}" alt="Tutorial Cara Bermain" class="w-full">
+            <img id="tutorial-img" src="" alt="Tutorial Cara Bermain" class="w-full">
             
             <button id="understand-btn" class="w-1/4 max-w-xs transform hover:scale-110 transition-transform duration-200">
                 <img src="{{ url_for('static', filename='gelembung_img/mulai_button.png') }}" alt="Lanjutkan">
@@ -296,8 +307,6 @@
         </div>
     </div>
 
-
-
     <!-- ======================== -->
     <!--      LOGIKA JAVASCRIPT     -->
     <!-- ======================== -->
@@ -309,6 +318,7 @@
         const gameScreen = document.getElementById('game-screen');
         const levelScreen = document.getElementById('level-screen');
         const tutorialScreen = document.getElementById('tutorial-screen');
+        const tutorialImg = document.getElementById('tutorial-img');
         const resultScreen = document.getElementById('result-screen');
 
         const playBtn = document.getElementById('play-btn');
@@ -331,7 +341,6 @@
         const level2Btn = document.getElementById('level-2-btn');
         const level3Btn = document.getElementById('level-3-btn');
 
-        const bgm = document.getElementById('bgm');
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('gameCanvas');
         const canvasCtx = canvasElement.getContext('2d');
@@ -357,8 +366,6 @@
         let bubbles = [];
         let hands = null;
         let camera = null;
-        let effectOn = true;
-        let musicOn = true;
 
         let isTutorialActive = true;
         let countdownActive = false;
@@ -371,6 +378,9 @@
         let lastFrameTime = 0;
         let pauseStartTime = 0;
         let totalPausedDuration = 0;
+        let gameDuration = 90;
+        let remainingTime = gameDuration;
+        let gameTimerActive = false;
 
 
         // PROGRESS SISTEM - Menyimpan progres pemain (dalam memori)
@@ -380,9 +390,123 @@
             3: { unlocked: false, stars: 0, bestScore: 0, bestTime: 999 }
         };
 
-        // Testing
-         //playerProgress[2].unlocked = true;
-         //playerProgress[3].unlocked = true;
+        const AudioManager = (() => {
+            // --- Kategorisasi ---
+            const music = {
+                mainmenu: document.getElementById('bgm-mainmenu'),
+                gameplay: document.getElementById('bgm-gameplay'),
+                bgwin: document.getElementById('bgm-bgwin'),
+                bglose: document.getElementById('bgm-bglose'),
+            };
+
+            const sfx = {
+                closebtn: document.getElementById('bgm-closebtn'),
+                levelClick: document.getElementById('bgm-level-click'),
+                levelHover: document.getElementById('bgm-level-hover'),
+                playbtn: document.getElementById('bgm-playbtn'),
+                menubtnClick: document.getElementById('bgm-menubtn-click'),
+                menubtnHover: document.getElementById('bgm-menubtn-hover'),
+                sfxwin: document.getElementById('bgm-sfxwin'),
+                sfxstartgame: document.getElementById('bgm-sfxstartgame'),
+            };
+
+            // --- State ---
+            let musicMuted = false;
+            let sfxMuted = false;
+            let volumeMusic = 0.50;
+            let volumeSfx = 1.0;
+            let currentMusic = null;
+
+            // --- Internal Helpers ---
+            const stopAll = (collection) => {
+                for (const key in collection) {
+                    const audio = collection[key];
+                    if (!audio.paused) {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }
+                }
+            };
+
+            const setMuteState = (collection, muted) => {
+                for (const key in collection) {
+                    collection[key].muted = muted;
+                }
+            };
+
+            // --- Public API ---
+            return {
+                // --- Music Control ---
+                playMusic(name, loop = true) {
+                    if (!music[name]) return;
+                    stopAll(music);
+                    currentMusic = music[name];
+                    if (!musicMuted) {
+                        currentMusic.loop = loop;
+                        currentMusic.volume = volumeMusic;
+                        currentMusic.play();
+                    }
+                },
+
+                pauseMusic() {
+                    if (currentMusic && !currentMusic.paused) {
+                        currentMusic.pause();
+                    }
+                },
+
+                resumeMusic() {
+                    if (currentMusic && currentMusic.paused && !musicMuted) {
+                        currentMusic.play();
+                    }
+                },
+
+                stopMusic() {
+                    stopAll(music);
+                    currentMusic = null;
+                },
+
+                stopMusicByName(name) {
+                    if (music[name]) {
+                        music[name].pause();
+                        music[name].currentTime = 0;
+                        if (currentMusic === music[name]) currentMusic = null;
+                    }
+                },
+
+                // --- SFX Control ---
+                playSFX(name) {
+                    if (!sfx[name]) return;
+                    if (!sfxMuted) {
+                        sfx[name].volume = volumeSfx;
+                        sfx[name].currentTime = 0;
+                        sfx[name].play();
+                    }
+                },
+
+                stopSFX(name) {
+                    if (sfx[name]) {
+                        sfx[name].pause();
+                        sfx[name].currentTime = 0;
+                    }
+                },
+
+                // --- Mute Controls ---
+                muteMusic(state) {
+                    musicMuted = state;
+                    setMuteState(music, state);
+                    if (state) stopAll(music);
+                },
+
+                muteSFX(state) {
+                    sfxMuted = state;
+                    setMuteState(sfx, state);
+                },
+
+                // --- Getters ---
+                isMusicMuted() { return musicMuted; },
+                isSFXMuted() { return sfxMuted; }
+            };
+        })();
 
         // ==========================================
         // KONFIGURASI LEVEL
@@ -436,6 +560,9 @@
             retryButton: "{{ url_for('static', filename='gelembung_img/retry-button.png') }}",
             pauseButton: "{{ url_for('static', filename='gelembung_img/pause-button.png') }}",
             continueButton: "{{ url_for('static', filename='gelembung_img/continue-button.png') }}",
+            tutorialLv1: "{{ url_for('static', filename='gelembung_img/tutoriallv1.png') }}",
+            tutorialLv2: "{{ url_for('static', filename='gelembung_img/tutoriallv2.png') }}",
+            tutorialLv3: "{{ url_for('static', filename='gelembung_img/tutoriallv3.png') }}",
         };
 
         Object.keys(imageUrls).forEach(key => {
@@ -517,32 +644,48 @@
         // EVENT LISTENERS - NAVIGASI
         // ==========================================
         playBtn.addEventListener('click', () => {
+            AudioManager.playSFX('playbtn');
             menuScreen.classList.add('hidden');
             levelScreen.classList.remove('hidden');
             openFullscreen();
         });
 
+        playBtn.addEventListener('mouseenter',() => {
+            AudioManager.playSFX('menubtnHover');
+        })
+
+        settingsBtn.addEventListener('mouseenter',() => {
+            AudioManager.playSFX('menubtnHover');
+        })
+
+        quitBtn.addEventListener('mouseenter', () => { 
+            AudioManager.playSFX('menubtnHover');
+        });
+
         settingsBtn.addEventListener('click', () => {
+            AudioManager.stopSFX('menubtnHover');
+            AudioManager.playSFX('menubtnClick');
             settingsOverlay.classList.remove('hidden');
             settingsOverlay.classList.add('show');
         });
 
         levelmenuClose.addEventListener('click', () => {
+            AudioManager.playSFX('closebtn');
             levelScreen.classList.add('hidden');
             menuScreen.classList.remove('hidden');
         });
 
         effectSound.addEventListener('click', () => {
-            if (!effectOn) {
-                effectOn = true;
+            if (AudioManager.isSFXMuted()) {
+                AudioManager.muteSFX(false);
                 effectSound.src = "{{ url_for('static', filename='gelembung_img/sound-active-button.png') }}";
                 effectMute.src = "{{ url_for('static', filename='gelembung_img/mute-nonactive-button.png') }}";
             }
         });
 
         effectMute.addEventListener('click', () => {
-            if (effectOn) {
-                effectOn = false;
+            if (!AudioManager.isSFXMuted()) {
+                AudioManager.muteSFX(true);
                 effectSound.src = "{{ url_for('static', filename='gelembung_img/sound-nonactive-button.png') }}";
                 effectMute.src = "{{ url_for('static', filename='gelembung_img/mute-active-button.png') }}";
             }
@@ -550,39 +693,36 @@
 
         // === TOGGLE MUSIC ===
         musicSound.addEventListener('click', () => {
-            if (!musicOn) {
-                musicOn = true;
+            if (AudioManager.isMusicMuted()) {
+                AudioManager.muteMusic(false);
                 musicSound.src = "{{ url_for('static', filename='gelembung_img/sound-active-button.png') }}";
                 musicMute.src = "{{ url_for('static', filename='gelembung_img/mute-nonactive-button.png') }}";
-                bgm.play();
+                AudioManager.playMusic('mainmenu');
             }
         });
 
         musicMute.addEventListener('click', () => {
-            if (musicOn) {
-                musicOn = false;
+            if (!AudioManager.isMusicMuted()) {
+                AudioManager.muteMusic(true);
                 musicSound.src = "{{ url_for('static', filename='gelembung_img/sound-nonactive-button.png') }}";
                 musicMute.src = "{{ url_for('static', filename='gelembung_img/mute-active-button.png') }}";
-                bgm.pause();
+                AudioManager.stopMusic()
             }
         });
 
         // === CLOSE BUTTON ===
         closeSettings.addEventListener('click', () => {
+            AudioManager.playSFX('closebtn');
             settingsOverlay.classList.add('hidden');
         });
 
-        window.addEventListener('DOMContentLoaded', () => {
-            bgm.volume = 0.7;
-            bgm.play().catch(() => {
-            });
-            });
-
-        quitBtn.addEventListener('click', () => { 
-            window.location.href = '/';
+        quitBtn.addEventListener('click', () => {
+            AudioManager.playSFX('menubtnClick');
+            window.location.href = 'https://cloudsup.framer.website/dashboard';
         });
 
         understandBtn.addEventListener('click', () => {
+            AudioManager.playSFX('sfxstartgame');
             tutorialScreen.classList.add('hidden');
             isTutorialActive = false;
             countdownActive = true;
@@ -591,41 +731,65 @@
         
         homeBtn.addEventListener('click', () => {
             stopGame();
+            AudioManager.stopMusic();
+            AudioManager.playSFX('menubtnClick');
             resetGameState();
             resultScreen.classList.add('hidden');
             gameScreen.classList.add('hidden');
             levelScreen.classList.remove('hidden');
+            AudioManager.playMusic('mainmenu');
         });
 
         retryBtn.addEventListener('click', () => {
+            AudioManager.stopMusic()
             resultScreen.classList.add('hidden');
+            AudioManager.playSFX('menubtnClick');
             startLevel(currentLevel);
         });
         
         nextLevelBtn.addEventListener('click', () => {
+            AudioManager.stopMusic()
+            AudioManager.playSFX('menubtnClick');
             resultScreen.classList.add('hidden');
             if (currentLevel < 3 && playerProgress[currentLevel + 1].unlocked) {
                 startLevel(currentLevel + 1);
             }
         });
 
+        homeBtn.addEventListener('mouseenter', () => {
+            AudioManager.playSFX('menubtnHover');
+        });
+
+        retryBtn.addEventListener('mouseenter', () => {
+            AudioManager.playSFX('menubtnHover');
+        });
+        
+        nextLevelBtn.addEventListener('mouseenter', () => {
+            AudioManager.playSFX('menubtnHover');
+        });
+
         pauseBtn.addEventListener('click', () => {
-            if (gameOver || gameWon || gamePaused) return;
+            AudioManager.playSFX('menubtnClick');
+            if (gameOver || gameWon || countdownActive) return;
+            if (gamePaused) return;
             gamePaused = true;
             pauseStartTime = Date.now();
             pauseOverlay.classList.remove('hidden');
-            bgm.pause();
+            AudioManager.pauseMusic();
         });
-        
+
         pauseContinue.addEventListener('click', () => {
+            AudioManager.playSFX('menubtnClick');
             if (!gamePaused) return;
             gamePaused = false;
             totalPausedDuration += Date.now() - pauseStartTime;
             pauseOverlay.classList.add('hidden');
-            bgm.play();
+            AudioManager.resumeMusic();
         });
 
         pauseHome.addEventListener('click', () => {
+            AudioManager.playSFX('menubtnClick');
+            AudioManager.stopMusic();
             gamePaused = false;
             pauseOverlay.classList.add('hidden');
             stopGame();
@@ -635,23 +799,62 @@
         });
 
         pauseRetry.addEventListener('click', () => {
+            AudioManager.playSFX('menubtnClick');
             gamePaused = false;
             pauseOverlay.classList.add('hidden');
             resetGameState();
             startLevel(currentLevel);
         });
 
+        pauseBtn.addEventListener('mouseenter', () => {
+            AudioManager.playSFX('menubtnHover');
+        });
+
+        pauseContinue.addEventListener('mouseenter', () => {
+            AudioManager.playSFX('menubtnHover');
+        });
+
+
+        pauseHome.addEventListener('mouseenter', () => {
+            AudioManager.playSFX('menubtnHover');
+        });
+
+        pauseRetry.addEventListener('mouseenter', () => {
+            AudioManager.playSFX('menubtnHover');
+        });
+
         // Level button click handlers
         level1Btn.addEventListener('click', () => {
+            AudioManager.playSFX('levelClick');
             if (playerProgress[1].unlocked) startLevel(1);
         });
 
         level2Btn.addEventListener('click', () => {
+            AudioManager.playSFX('levelClick');
             if (playerProgress[2].unlocked) startLevel(2);
         });
 
         level3Btn.addEventListener('click', () => {
+            AudioManager.playSFX('levelClick');
             if (playerProgress[3].unlocked) startLevel(3);
+        });
+
+        level1Btn.addEventListener('mouseenter', () => {
+            if (!level1Btn.disabled) {
+                AudioManager.playSFX('levelHover');
+            }
+        });
+
+        level2Btn.addEventListener('mouseenter', () => {
+            if (!level2Btn.disabled) {
+                AudioManager.playSFX('levelHover');
+            }
+        });
+
+        level3Btn.addEventListener('mouseenter', () => {
+            if (!level3Btn.disabled) {
+                AudioManager.playSFX('levelHover');
+            }
         });
 
         // ==========================================
@@ -667,8 +870,18 @@
 
         function startLevel(level) {
             currentLevel = level;
+            pauseBtn.classList.add('hidden');
             levelScreen.classList.add('hidden');
             gameScreen.classList.remove('hidden');
+            if (currentLevel == 1) {
+                tutorialImg.src = images.tutorialLv1.src
+            }
+            else if (currentLevel == 2) {
+                tutorialImg.src = images.tutorialLv2.src
+            }
+            else if (currentLevel == 3) {
+                tutorialImg.src = images.tutorialLv3.src
+            }
             tutorialScreen.classList.remove('hidden');
             
             resetGameState();
@@ -781,7 +994,7 @@
         }
 
         function updateCountdown() {
-            if (!countdownActive || gamePaused) return; // jangan lanjut kalau pause
+            if (!countdownActive || gamePaused) return;
 
             const elapsed = Date.now() - countdownStartTime;
             const count = 3 - Math.floor(elapsed / 1000);
@@ -794,8 +1007,8 @@
             if (elapsed >= 3500) {
                 countdownActive = false;
                 gameStartTime = Date.now();
-                totalPausedDuration = 0;
-                
+                gameTimerActive = true;
+                AudioManager.playMusic('gameplay');
             }
         }
 
@@ -901,7 +1114,7 @@
 
         function showResultScreen() {
 
-            // Jangan langsung sembunyikan gameScreen, biar kelihatan di belakang popup
+            AudioManager.stopMusicByName('gameplay');
             resultScreen.classList.remove('hidden');
             
             const popup = document.getElementById('result-popup');
@@ -909,29 +1122,48 @@
             const resultStatus = document.getElementById('result-status');
             const resultScore = document.getElementById('result-score');
 
-            // Reset animasi popup
             popup.classList.remove('active'); 
-            void popup.offsetWidth; // force reflow biar animasi bisa diulang
+            void popup.offsetWidth;
             popup.classList.add('active');
 
-            // Tentukan jumlah bintang
             const stars = gameWon ? calculateStars(score, elapsedSeconds) : 0;
 
             if (score >= 100){
-                resultImg.src = images.resultStar3.src
+                resultImg.src = images.resultStar3.src;
+                AudioManager.playSFX('sfxwin');
+
+                const sfx = document.getElementById('bgm-sfxwin');
+                sfx.addEventListener('ended', function onEnd() {
+                    AudioManager.playMusic('bgwin');
+                    sfx.removeEventListener('ended', onEnd);
+                });
             }
             else if (score >= 80) {
-                resultImg.src = images.resultStar2.src
+                resultImg.src = images.resultStar2.src;
+                AudioManager.playSFX('sfxwin');
+
+                const sfx = document.getElementById('bgm-sfxwin');
+                sfx.addEventListener('ended', function onEnd() {
+                    AudioManager.playMusic('bgwin');
+                    sfx.removeEventListener('ended', onEnd);
+                });
             }
             else if (score >= 60) {
-                resultImg.src = images.resultStar1.src
+                resultImg.src = images.resultStar1.src;
+                AudioManager.playSFX('sfxwin');
+
+                const sfx = document.getElementById('bgm-sfxwin');
+                sfx.addEventListener('ended', function onEnd() {
+                    AudioManager.playMusic('bgwin');
+                    sfx.removeEventListener('ended', onEnd);
+                });
             }
             else {
-                resultImg.src = images.resultStar0.src
+                resultImg.src = images.resultStar0.src;
+                AudioManager.playMusic('bglose');
             }
 
-            // Teks status
-            if (stars >= 1) {
+            if (score >= 60) {
                 resultStatus.textContent = "KERJA BAGUS!";
                 resultStatus.style.color = "#045170";
             } else {
@@ -1070,14 +1302,20 @@
 
             // Timer
             if (!gameOver && !gameWon && gameStartTime > 0 && !countdownActive) {
-                const now = gamePaused ? pauseStartTime : Date.now();
-                elapsedSeconds = Math.floor(((now - totalPausedDuration) - gameStartTime) / 1000);
+                const elapsed = Math.floor((Date.now() - gameStartTime - totalPausedDuration) / 1000);
+                remainingTime = Math.max(0, gameDuration - elapsed);
+
+                if (remainingTime <= 0) {
+                    remainingTime = 0;
+                    gameOver = true;
+                    showResultScreen();
+                }
             }
             const timerWidth = 360, timerHeight = 180, timerX = w - timerWidth - 100, timerY = 20;
             canvasCtx.drawImage(images.timer, timerX, timerY, timerWidth, timerHeight);
             canvasCtx.fillStyle = '#20606D';
             canvasCtx.font = '40px Lilita One';
-            canvasCtx.fillText(`Waktu : ${elapsedSeconds} detik`, timerX + timerWidth / 2, timerY + timerHeight / 2 + 50);
+            canvasCtx.fillText(`Waktu: ${remainingTime} detik`, timerX + timerWidth / 2, timerY + timerHeight / 2 + 50);
 
             // Countdown overlay
             if (countdownActive && countdownNumber > 0) {
@@ -1098,6 +1336,16 @@
         // INITIALIZATION - Load progress saat start
         // ==========================================
         updateLevelButtons();
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!menuScreen.classList.contains('hidden')) {
+                try {
+                    AudioManager.playMusic('mainmenu');
+                } catch (e) {
+                    console.warn("Autoplay mungkin diblokir, akan dicoba setelah interaksi pengguna.");
+                }
+            }
+        });
 
     </script>
 </body>
