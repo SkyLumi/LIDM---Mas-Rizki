@@ -49,7 +49,7 @@
     <!-- ======================== -->
     <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
     <!-- ======================== -->
-    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/bg.png') }}');">
+    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/bg.jpg') }}');">
         <div class="relative w-full h-full flex items-center justify-center">
             
             <!-- Panel Menu Utama -->
@@ -78,7 +78,7 @@
     <!-- ======================== -->
     <!--   LAYAR 1.5: PILIH LEVEL  -->
     <!-- ======================== -->
-    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/background.png') }}');">
+    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/background.jpg') }}');">
         
         <!-- Wrapper 'relative' yang mengisi seluruh layar untuk menjadi acuan posisi absolut -->
         <div class="relative w-full h-full">
@@ -108,7 +108,7 @@
             <img src="{{ url_for('static', filename='gelembung_img/tutorial.png') }}" alt="Tutorial Cara Bermain" class="w-full">
             
             <button id="understand-btn" class="w-1/4 max-w-xs transform hover:scale-110 transition-transform duration-200">
-                <img src="{{ url_for('static', filename='gelembung_img/mulaiButton.png') }}" alt="Lanjutkan">
+                <img src="{{ url_for('static', filename='gelembung_img/mulai_button.png') }}" alt="Lanjutkan">
             </button>
         </div>
     </div>
@@ -216,6 +216,28 @@
             images[key] = new Image();
             images[key].src = imageUrls[key];
         });
+
+        function preloadGameAssets() {
+            console.log("Mulai preloading aset game...");
+            const assetsToLoad = [
+                "{{ url_for('static', filename='gelembung_img/background.jpg') }}",
+                "{{ url_for('static', filename='gelembung_img/bg.jpg') }}",
+                "{{ url_for('static', filename='gelembung_img/mulai_button.png') }}",
+                
+                "{{ url_for('static', filename='gelembung_img/level1btn.png') }}",
+                "{{ url_for('static', filename='gelembung_img/levelbox.png') }}",
+                "{{ url_for('static', filename='gelembung_img/levellock.png') }}"
+            ];
+
+            assetsToLoad.forEach(url => {
+                const img = new Image();
+                img.src = url;
+            });
+
+            console.log("Preloading selesai.");
+        }
+
+        preloadGameAssets();
 
         function openFullscreen() {
             const elem = document.documentElement;

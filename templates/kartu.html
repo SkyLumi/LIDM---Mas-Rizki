@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Memori Kartu</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
     
     <!-- Import MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -38,15 +38,16 @@
         .card-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 1.5rem; /* Jarak antar kartu sedikit lebih besar */
+            column-gap: 3rem;
+            row-gap: 2.5rem;
             padding: 1rem;
-            max-width: 450px; /* Lebar maksimal lebih kecil */
+            max-width: 800px; /* Lebar maksimal lebih kecil */
             width: 90%;
             margin: auto;
         }
         
         .card {
-            aspect-ratio: 2 / 3; /* Rasio potrait */
+            aspect-ratio: 5 / 7; /* Rasio potrait */
             perspective: 1000px;
             cursor: pointer;
         }
@@ -79,25 +80,18 @@
         }
 
         .card-back {
-            background-color: #4a5568;
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239CA3AF' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-        }
-        
-        .card-back-icon {
-            font-size: 3rem;
-            color: white;
-            font-family: 'Luckiest Guy', cursive;
+            background-image: url("/static/kartu_img/kartu_kebalik.png");
+            background-size: cover;
+            background-position: center;
         }
 
         .card-front {
-            background-color: #edf2f7;
             transform: rotateY(180deg);
         }
 
         .card-front img {
-            width: 80%;
-            height: 80%;
-            object-fit: contain;
+            width: 100%;
+            height: 100%;
         }
         
         .card.matched .card-inner {
@@ -109,18 +103,28 @@
         /* Kursor Tangan */
         #hand-cursor {
             position: absolute;
-            width: 40px;
-            height: 40px;
-            background-image: url('https://placehold.co/40x40/3b82f6/ffffff?text=👇');
-            background-size: contain;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 100px;
+            background-image: url('/static/kartu_img/hand_gesture.png');
+            background-size: cover;
             pointer-events: none; /* Penting agar tidak menghalangi klik */
             z-index: 9999;
             transition: transform 0.2s ease-out;
         }
         #hand-cursor.clicking {
             transform: translate(-50%, -50%) scale(0.8);
+        }
+        #hand-cursor.loading {
+            filter: drop-shadow(0 0 8px #00ff00);
+        }
+
+        @keyframes spin {
+            from {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            to {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
         }
 
         /* Loader */
@@ -137,27 +141,63 @@
     <!-- ======================== -->
     <!--     LAYAR 1: MENU UTAMA    -->
     <!-- ======================== -->
-    <div id="menu-screen" class="screen bg-cover bg-center" style="background-color: #2d3748;">
-        <div class="relative w-full h-full flex items-center justify-center p-4">
-            <div class="relative w-full max-w-lg flex flex-col items-center bg-gray-800 p-8 rounded-2xl shadow-2xl border-4 border-blue-500">
-                <h1 class="text-5xl md:text-7xl font-bold text-white mb-8 text-center" style="font-family: 'Luckiest Guy', cursive;">MEMORI KARTU TANGAN</h1>
-                <div class="flex flex-col md:flex-row justify-center gap-4 w-full z-20">
-                    <button id="play-btn" class="w-full md:w-1/3 bg-green-500 text-white font-bold py-4 px-6 rounded-lg text-2xl transform hover:scale-105 transition-transform duration-200 shadow-lg">
-                        Mulai
+    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='kartu_img/main_screen.jpg') }}');">
+        <div class="relative w-full h-full flex items-center justify-center">
+            
+            <!-- Panel Menu Utama -->
+            <!-- TAMBAHKAN 'relative' DI SINI untuk menjadi acuan posisi tombol -->
+            <div class="relative w-full max-w-8xl flex flex-col items-center bottom-24">
+                <img src="{{ url_for('static', filename='kartu_img/titlebox.png') }}" alt="Menu Utama" class="w-2/5 z-10">
+
+                <!-- Kontainer Tombol-Tombol -->
+                <!-- GANTI class positioningnya dengan 'absolute' -->
+                <div class="absolute -bottom-40 left-0 right-0 flex justify-center gap-4 w-full z-20">
+                    <button id="play-btn" class="w-56 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='kartu_img/play_button.png') }}" alt="Play" class="pointer-events-none w-full">
                     </button>
-                    <button id="quit-btn" class="w-full md:w-1/3 bg-red-500 text-white font-bold py-4 px-6 rounded-lg text-2xl transform hover:scale-105 transition-transform duration-200 shadow-lg">
-                        Keluar
+                    <button id="settings-btn" class="w-56 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='kartu_img/pengaturan_button.png') }}" alt="Pengaturan" class="pointer-events-none w-full">
+                    </button>
+                    <button id="quit-btn" class="w-56 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='kartu_img/keluar_button.png') }}" alt="Keluar" class="pointer-events-none w-full">
                     </button>
                 </div>
             </div>
+
         </div>
     </div>
     
+    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='kartu_img/level_bg.jpg') }}');">
+        
+        <!-- Wrapper 'relative' yang mengisi seluruh layar untuk menjadi acuan posisi absolut -->
+        <div class="relative w-full h-full">
+            <div class="absolute inset-0 flex flex-col justify-center items-center gap-8 lg:pb-40">
+                
+                <h2 class="text-[#F0BE67] font-['Lilita One'] text-3xl md:text-5xl font-bold mb-8">
+                    LEVEL
+                </h2>
+                
+                <div>
+                    <button id="level-1-btn" class="transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='kartu_img/level_1_btn.png') }}" alt="Level 1" class="w-24 md:w-48">
+                    </button>
+                    <button id="level-2-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='kartu_img/level_2_btn.png') }}" alt="Level 2 Locked" class="w-24 md:w-48 opacity-50">
+                    </button>
+                    <button id="level-3-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='kartu_img/level_3_btn.png') }}" alt="Level 3 Locked" class="w-24 md:w-48 opacity-50">
+                    </button>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+
     <!-- ======================== -->
     <!--     LAYAR 2: GAMEPLAY      -->
     <!-- ======================== -->
-    <div id="game-screen" class="screen hidden bg-gray-800 flex-col p-4">
-        <!-- Elemen untuk Kamera dan Kursor -->
+    <div id="game-screen" class="screen hidden flex-col p-4" style="background-image: url('/static/kartu_img/bg.jpg'); background-size: cover; background-position: center;">
         <video id="webcam" class="hidden" autoplay playsinline></video>
         <div id="hand-cursor" class="hidden"></div>
          <div id="loading-container" class="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 z-50">
@@ -171,16 +211,16 @@
                 <div class="text-white text-xl">
                     Langkah: <span id="moves-count" class="font-bold text-2xl text-yellow-400">0</span>
                 </div>
-                 <button id="restart-btn" class="bg-blue-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-600 transition-colors text-lg">
+                 <!-- <button id="restart-btn" class="bg-blue-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-600 transition-colors text-lg">
                     Ulangi
-                </button>
+                </button> -->
                 <div class="text-white text-xl">
-                    Waktu: <span id="time-count" class="font-bold text-2xl text-yellow-400">0</span>s
+                    <span id="time-count" class="font-bold text-2xl text-yellow-400">0</span>
                 </div>
             </div>
 
             <!-- Area Permainan -->
-            <div id="game-board" class="card-grid flex-grow">
+            <div id="game-board" class="card-grid">
                 <!-- Kartu akan digenerate oleh JavaScript -->
             </div>
         </div>
@@ -214,16 +254,23 @@
         // --- MANAJEMEN LAYAR & NAVIGASI ---
         const menuScreen = document.getElementById('menu-screen');
         const gameScreen = document.getElementById('game-screen');
+        const levelScreen = document.getElementById('level-screen');
+        const level1btn = document.getElementById('level-1-btn');
         const winScreen = document.getElementById('win-screen');
         const playBtn = document.getElementById('play-btn');
         const quitBtn = document.getElementById('quit-btn');
         const exitGameBtn = document.getElementById('exit-game-btn');
-        const restartBtn = document.getElementById('restart-btn');
         const playAgainBtn = document.getElementById('play-again-btn');
         const loadingContainer = document.getElementById('loading-container');
 
         playBtn.addEventListener('click', () => {
             menuScreen.classList.add('hidden');
+            levelScreen.classList.remove('hidden');
+            openFullscreen();
+        });
+
+        level1btn.addEventListener('click', () => {
+            levelScreen.classList.add('hidden');
             gameScreen.classList.remove('hidden');
             startGame();
         });
@@ -236,11 +283,6 @@
             stopGame();
             gameScreen.classList.add('hidden');
             menuScreen.classList.remove('hidden');
-        });
-        
-        restartBtn.addEventListener('click', () => {
-            stopGame();
-            startGame();
         });
         
         playAgainBtn.addEventListener('click', () => {
@@ -256,15 +298,30 @@
         const winTimeEl = document.getElementById('win-time');
 
         const cardImages = [
-            { id: 'burger', src: 'https://placehold.co/150x225/f59e0b/ffffff?text=🍔' },
-            { id: 'pizza', src: 'https://placehold.co/150x225/d97706/ffffff?text=🍕' },
-            { id: 'donut', src: 'https://placehold.co/150x225/ec4899/ffffff?text=🍩' },
+            { id: 'apple', src: "{{ url_for('static', filename='kartu_img/apple.png') }}" },
+            { id: 'banana', src: "{{ url_for('static', filename='kartu_img/banana.png') }}" },
+            { id: 'cherry', src: "{{ url_for('static', filename='kartu_img/cherry.png') }}" },
+            { id: 'kiwi', src: "{{ url_for('static', filename='kartu_img/kiwi.png') }}" },
+            { id: 'lemon', src: "{{ url_for('static', filename='kartu_img/lemon.png') }}" },
+            { id: 'orange', src: "{{ url_for('static', filename='kartu_img/orange.png') }}" },
+            { id: 'peach', src: "{{ url_for('static', filename='kartu_img/peach.png') }}" },
+            { id: 'pear', src: "{{ url_for('static', filename='kartu_img/pear.png') }}" },
+            { id: 'strawberry', src: "{{ url_for('static', filename='kartu_img/strawberry.png') }}" },
+            { id: 'watermelon', src: "{{ url_for('static', filename='kartu_img/watermelon.png') }}" },
+            { id: 'beatroot', src: "{{ url_for('static', filename='kartu_img/beatroot.png') }}" },
         ];
 
         let flippedCards = [], matchedPairs = 0, moves = 0, timer = null, seconds = 0;
-        let isBoardLocked = false, isPinching = false, pinchCooldown = false;
+        let isBoardLocked = false;
+        let currentHover = {
+            element: null,
+            startTime: null
+        };
+        const HOVER_DURATION = 1500;
 
-        // --- Variabel MediaPipe ---
+        let lastCursorPosition = { x: 0, y: 0 };
+        let hoverCheckInterval = null;
+
         const videoElement = document.getElementById('webcam');
         const handCursor = document.getElementById('hand-cursor');
         let hands = null;
@@ -272,63 +329,72 @@
 
         function onResults(results) {
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmarks = results.multiHandLandmarks[0]; // Ambil tangan pertama saja
-                
-                // Landmark untuk ujung jari telunjuk (8) dan ibu jari (4)
+                const landmarks = results.multiHandLandmarks[0];
                 const indexTip = landmarks[8];
-                const thumbTip = landmarks[4];
 
-                // Konversi koordinat normal ke koordinat layar
-                // Ingat, video di-mirror, jadi koordinat X harus dibalik (1 - x)
                 const cursorX = window.innerWidth * (1 - indexTip.x);
                 const cursorY = window.innerHeight * indexTip.y;
                 
-                // Pindahkan kursor
+                lastCursorPosition.x = cursorX;
+                lastCursorPosition.y = cursorY;
+
                 handCursor.style.left = `${cursorX}px`;
                 handCursor.style.top = `${cursorY}px`;
                 handCursor.classList.remove('hidden');
 
-                // Hitung jarak antara telunjuk dan ibu jari
-                const distance = Math.sqrt(
-                    Math.pow(indexTip.x - thumbTip.x, 2) +
-                    Math.pow(indexTip.y - thumbTip.y, 2) +
-                    Math.pow(indexTip.z - thumbTip.z, 2)
-                );
-                
-                // Deteksi gestur "pinch" (mencubit)
-                if (distance < 0.05) { // Threshold jarak, bisa disesuaikan
-                    if (!isPinching && !pinchCooldown) {
-                        isPinching = true;
-                        handCursor.classList.add('clicking');
-                        triggerClickAt(cursorX, cursorY);
-
-                        // Cooldown untuk mencegah klik beruntun
-                        pinchCooldown = true;
-                        setTimeout(() => {
-                           pinchCooldown = false;
-                        }, 500); // Cooldown 0.5 detik
-                    }
-                } else {
-                    isPinching = false;
-                    handCursor.classList.remove('clicking');
-                }
-
-            } else {
-                handCursor.classList.add('hidden'); // Sembunyikan jika tidak ada tangan
+            }
+            else {
+                handCursor.classList.add('hidden'); 
+                resetHover();
             }
         }
-        
-        function triggerClickAt(x, y) {
-            handCursor.classList.add('hidden'); // Sembunyikan kursor sementara
-            const element = document.elementFromPoint(x, y);
+
+        function checkHover() {
+            if (handCursor.classList.contains('hidden')) {
+                resetHover();
+                return;
+            }
+            
+            const { x, y } = lastCursorPosition;
+
+            handCursor.classList.add('hidden'); 
+            const elementUnderCursor = document.elementFromPoint(x, y);
             handCursor.classList.remove('hidden');
 
-            if (element && element.closest('.card')) {
-                const card = element.closest('.card');
-                flipCard(card);
+            const hoveredCard = elementUnderCursor ? elementUnderCursor.closest('.card') : null;
+            let validCard = null;
+            if (hoveredCard && !hoveredCard.classList.contains('flipped') && !hoveredCard.classList.contains('matched') && !isBoardLocked) {
+                validCard = hoveredCard;
+            }
+
+            if (validCard) {
+                if (currentHover.element === validCard) {
+                    const elapsedTime = Date.now() - currentHover.startTime;
+                    
+                    handCursor.classList.add('loading');
+
+                    if (elapsedTime >= HOVER_DURATION) {
+                        flipCard(validCard);
+                        resetHover();
+                    }
+                } else {
+                    resetHover();
+                    currentHover.element = validCard;
+                    currentHover.startTime = Date.now();
+                }
+            } else {
+                resetHover();
             }
         }
         
+        function openFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) elem.requestFullscreen();
+            else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+        }
+
         function setupHandTracking() {
             loadingContainer.classList.remove('hidden');
 
@@ -338,7 +404,7 @@
                 });
                 hands.setOptions({
                     maxNumHands: 1,
-                    modelComplexity: 0, // 0 untuk performa terbaik
+                    modelComplexity: 0,
                     minDetectionConfidence: 0.6,
                     minTrackingConfidence: 0.6,
                 });
@@ -354,7 +420,7 @@
             }
             
             camera.start().then(() => {
-                loadingContainer.classList.add('hidden'); // Sembunyikan loader jika berhasil
+                loadingContainer.classList.add('hidden');
             }).catch(err => {
                 console.error("Gagal memulai kamera:", err);
                 document.getElementById('loading-text').innerText = 'Gagal mengakses kamera. Mohon izinkan akses dan muat ulang halaman.';
@@ -372,7 +438,10 @@
         }
 
         function createGameBoard() {
-            const gameCards = shuffle([...cardImages, ...cardImages]);
+            const shuffledAllCards = shuffle([...cardImages]);
+            const selectedCards = shuffledAllCards.slice(0, 3);
+
+            const gameCards = shuffle([...selectedCards, ...selectedCards]);
             gameBoard.innerHTML = '';
             
             gameCards.forEach(cardData => {
@@ -381,7 +450,7 @@
                 cardElement.dataset.id = cardData.id;
                 cardElement.innerHTML = `
                     <div class="card-inner">
-                        <div class="card-back"><span class="card-back-icon">?</span></div>
+                        <div class="card-back"><span class="card-back-icon"></span></div>
                         <div class="card-front"><img src="${cardData.src}" alt="${cardData.id}"></div>
                     </div>`;
                 gameBoard.appendChild(cardElement);
@@ -428,12 +497,23 @@
             isBoardLocked = false;
         }
 
+        function resetHover() {
+            if (currentHover.element) {
+                // Jika kamu menambahkan visual di kartu, hapus di sini
+                // Contoh: currentHover.element.classList.remove('is-hovering');
+            }
+            currentHover.element = null;
+            currentHover.startTime = null;
+            handCursor.classList.remove('loading');
+        }
+
         function startGame() {
             stopGame();
             matchedPairs = 0;
             moves = 0;
             seconds = 0;
             isBoardLocked = false;
+            resetHover();
             
             movesCountEl.textContent = '0';
             timeCountEl.textContent = '0s';
@@ -445,11 +525,19 @@
                 seconds++;
                 timeCountEl.textContent = `${seconds}s`;
             }, 1000);
+
+            hoverCheckInterval = setInterval(checkHover, 100);
         }
         
         function stopGame() {
             clearInterval(timer);
             timer = null;
+            
+            clearInterval(hoverCheckInterval);
+            hoverCheckInterval = null;
+
+            resetHover();
+
             if (camera) {
                 camera.stop();
                 handCursor.classList.add('hidden');
