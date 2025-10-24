@@ -10,8 +10,8 @@ def menu():
     return render_template('menu.html')
 
 #------------------------------------------ es krim ------------------------------------
-@app.route('/eskrim-game')
-def eskrim_game():
+@app.route('/tangkap-game')
+def tangkap_game():
     """Menampilkan halaman game."""
     return render_template('eskrim.html')
 

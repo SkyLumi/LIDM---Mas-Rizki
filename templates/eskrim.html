@@ -132,6 +132,54 @@
 
 
     <!-- ======================== -->
+    <!--     RESULT SCREEN        -->
+    <!-- ======================== -->
+    <div id="result-screen" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+    <div id="result-popup" class="relative flex flex-col items-center transition-all duration-700 ease-out transform -translate-y-full">
+        <!-- Gambar hasil -->
+        <img id="result-image" src="" alt="result background" class="w-[720px] h-auto mx-auto" />
+
+        <!-- Tulisan skor -->
+        <div id="result-text"
+        class="absolute inset-0 flex flex-col items-center justify-center font-['Lilita_One'] text-[#00446b] space-y-2 transform -translate-y-[5%]">
+        
+        <!-- Tulisan utama -->
+        <div id="result-status"
+            class="text-[96px] leading-tight text-[#045170] text-center break-words max-w-[6ch] mx-auto">
+            KERJA BAGUS!
+        </div>
+        
+        <!-- Skor -->
+        <div class="text-[48px] text-[#045170] font-['Raleway'] font-extrabold">
+            Score: <span id="result-score" class="text-[#FE6291] text-[48px] font-['Raleway'] font-bold">0</span>
+        </div>
+        </div>
+
+        <!-- Tombol Home, Retry, dan Next Level -->
+        <div class="absolute bottom-[8%] left-1/2 transform -translate-x-1/2 flex gap-14">
+            <button id="home-btn">
+                <img src="{{ url_for('static', filename='gelembung_img/home-button.png') }}" 
+                    alt="Home"
+                    class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
+            </button>
+
+            <button id="retry-btn">
+                <img src="{{ url_for('static', filename='gelembung_img/retry-button.png') }}" 
+                    alt="Retry"
+                    class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
+            </button>
+
+            <button id="nextLevelBtn-btn" class="hidden">
+                <img src="{{ url_for('static', filename='gelembung_img/nextlevel-button.png') }}" 
+                    alt="Next Level"
+                    class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
+            </button>
+        </div>
+
+    </div>
+    </div>
+
+    <!-- ======================== -->
     <!--      LOGIKA JAVASCRIPT     -->
     <!-- ======================== -->
     <script>
@@ -141,6 +189,7 @@
         const levelScreen = document.getElementById('level-screen');
         const tutorialScreen = document.getElementById('tutorial-screen');
         const countdownScreen = document.getElementById('countdown-screen');
+        const resultScreen = document.getElementById('result-screen');
         const countdownImage = document.getElementById('countdown-image');
         const playBtn = document.getElementById('play-btn');
         const level1Btn = document.getElementById('level-1-btn');
@@ -148,6 +197,8 @@
         const quitBtn = document.getElementById('quit-btn');
         const exitGameBtn = document.getElementById('exit-game-btn');
         const understandBtn = document.getElementById('understand-btn');
+        const nextLevelBtn = document.getElementById('nextLevelBtn-btn');
+        
 
         playBtn.addEventListener('click', () => {
             menuScreen.classList.add('hidden');
@@ -201,66 +252,44 @@
         // Game Over Panel Animation Variables
         let gameOverPanelActive = false;
         let gameOverAnimationStart = 0;
-        let gameOverPanelY = -900; // Start position (off-screen top) - diperbesar untuk panel yang lebih besar
-        const gameOverTargetY = 0; // Final position - dipindahkan ke atas
-        const gameOverAnimationDuration = 800; // 0.8 seconds
         
         const smoothingFactor = 0.3;
         const spawnRate = 6;
 
         let coneImage = new Image();
         coneImage.src = "{{ url_for('static', filename='eskrim_img/cone.png') }}";
-
         let iceCreamImage = new Image();
         iceCreamImage.src = "{{ url_for('static', filename='eskrim_img/vanillaFall.png') }}";
-
         let scorePanelImage = new Image();
         scorePanelImage.src = "{{ url_for('static', filename='eskrim_img/scorePanel.png') }}";
-
         let dispenserImage = new Image();
         dispenserImage.src = "{{ url_for('static', filename='eskrim_img/dispenserArm.png') }}";
-
         let machineryImage = new Image();
         machineryImage.src = "{{ url_for('static', filename='eskrim_img/backgroundMesin.png') }}";
-
         let lifeConeImage = new Image();
         lifeConeImage.src = "{{ url_for('static', filename='eskrim_img/life-cone-icon.png') }}";
-
         let boxLife = new Image();
         boxLife.src = "{{ url_for('static', filename='eskrim_img/boxLife.png') }}";
-
         // --- Countdown Images ---
         let countdown3Image = new Image();
         countdown3Image.src = "{{ url_for('static', filename='eskrim_img/3.png') }}";
-
         let countdown2Image = new Image();
         countdown2Image.src = "{{ url_for('static', filename='eskrim_img/2.png') }}";
-
         let countdown1Image = new Image();
         countdown1Image.src = "{{ url_for('static', filename='eskrim_img/1.png') }}";
-
         let countdownGoImage = new Image();
         countdownGoImage.src = "{{ url_for('static', filename='eskrim_img/GO.png') }}";
-
         // --- Game Over Panel Images ---
-        let panelBoxImage = new Image();
-        panelBoxImage.src = "{{ url_for('static', filename='eskrim_img/panelbox.png') }}";
-
-        let panelHomeImage = new Image();
-        panelHomeImage.src = "{{ url_for('static', filename='eskrim_img/panelhome.png') }}";
-
-        let panelRestartImage = new Image();
-        panelRestartImage.src = "{{ url_for('static', filename='eskrim_img/panelrestart.png') }}";
-
-        let panelNextLevelImage = new Image();
-        panelNextLevelImage.src = "{{ url_for('static', filename='eskrim_img/panelnextlevel.png') }}";
-
-        let starImage = new Image();
-        starImage.src = "{{ url_for('static', filename='eskrim_img/star.png') }}";
-
-        // --- Fill Ice Cream Bar Image ---
         let fillIceCreamBarImage = new Image();
         fillIceCreamBarImage.src = "{{ url_for('static', filename='eskrim_img/Fillicecreambar.png') }}";
+        let resultStar0 = new Image();
+        resultStar0.src = "{{ url_for('static', filename='gelembung_img/result-0-star.png') }}";
+        let resultStar1 = new Image();
+        resultStar1.src = "{{ url_for('static', filename='gelembung_img/result-1-star.png') }}";
+        let resultStar2 = new Image();
+        resultStar2.src = "{{ url_for('static', filename='gelembung_img/result-2-star.png') }}";
+        let resultStar3 = new Image();
+        resultStar3.src = "{{ url_for('static', filename='gelembung_img/result-3-star.png') }}";
 
         function openFullscreen() {
             const elem = document.documentElement; // Target elemen adalah seluruh halaman (<html>)
@@ -501,10 +530,6 @@
             if (!gameOver) {
                  let targetConePos = { x: w / 2, y: h - 100 };
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    //for (const landmarks of results.multiHandLandmarks) {
-                    //    window.drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS, { color: '#FFFFFF', lineWidth: 5 });
-                    //    window.drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 2 });
-                    //}
                     if (results.multiHandLandmarks.length === 2) {
                         const wrist1 = results.multiHandLandmarks[0][0];
                         const wrist2 = results.multiHandLandmarks[1][0];
@@ -575,7 +600,6 @@
                     if (!gameOverPanelActive) {
                         gameOverPanelActive = true;
                         gameOverAnimationStart = Date.now();
-                        gameOverPanelY = -900; // Reset to start position
                     }
                 }
             }
@@ -620,13 +644,10 @@
             const panelX = w - panelWidth - 180;
             const panelY = h / 2 - panelHeight / 2;
             
-            // Draw fill ice cream bar behind score panel (progress bar)
             if (fillIceCreamBarImage.complete) {
-                // Calculate fill percentage based on score (max score = 100 for full bar)
                 const maxScore = 100;
                 const fillPercentage = Math.min(score / maxScore, 1); // 0 to 1
                 
-                // Fill bar dimensions and position - disesuaikan dengan area dalam scorePanel (kanan atas)
                 const fillBarWidth = panelWidth * 0.5; // 50% dari lebar panel
                 const fillBarHeight = panelHeight * 0.65; // 65% dari tinggi panel
                 const fillBarX = panelX + panelWidth * 0.45; // Geser ke kanan (35% dari kiri panel)
@@ -664,107 +685,8 @@
 
             // Animated Game Over Panel
             if (gameOver && gameOverPanelActive) {
-                const now = Date.now();
-                const elapsed = now - gameOverAnimationStart;
-                const progress = Math.min(elapsed / gameOverAnimationDuration, 1);
-                
-                // Easing function for smooth animation (ease-out)
-                const easeOut = 1 - Math.pow(1 - progress, 3);
-                
-                // Calculate current panel position
-                gameOverPanelY = -900 + (easeOut * (gameOverTargetY + 900));
-                
-                // Semi-transparent background
-                canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                canvasCtx.fillRect(0, 0, w, h);
-                
-                // Panel dimensions - diperbesar lagi
-                const panelWidth = 800;
-                const panelHeight = 900;
-                const panelX = (w - panelWidth) / 2;
-                
-                // Draw main panel box
-                if (panelBoxImage.complete) {
-                    canvasCtx.drawImage(
-                        panelBoxImage,
-                        panelX,
-                        gameOverPanelY,
-                        panelWidth,
-                        panelHeight
-                    );
-                }
-                
-                // Draw stars (3 stars at the top) - dipindahkan ke bawah
-                if (starImage.complete) {
-                    const starSize = 90;
-                    const starY = gameOverPanelY + 180;
-                    const starSpacing = 20;
-                    const startX = panelX + (panelWidth - (3 * starSize + 2 * starSpacing)) / 2;
-                    
-                    for (let i = 0; i < 3; i++) {
-                        canvasCtx.drawImage(
-                            starImage,
-                            startX + i * (starSize + starSpacing),
-                            starY,
-                            starSize,
-                            starSize
-                        );
-                    }
-                }
-                
-                // Draw text content - dipindahkan ke bawah
-                canvasCtx.fillStyle = 'white';
-                canvasCtx.textAlign = 'center';
-                canvasCtx.font = 'bold 36px sans-serif';
-                canvasCtx.fillText('Level 01', w / 2, gameOverPanelY + 380);
-                
-                canvasCtx.font = 'bold 54px sans-serif';
-                canvasCtx.fillText('KERJA BAGUS!', w / 2, gameOverPanelY + 450);
-                
-                canvasCtx.font = '30px sans-serif';
-                canvasCtx.fillText(`Score: ${score}`, w / 2, gameOverPanelY + 540);
-                canvasCtx.fillText(`Scoops: ${Math.floor(score / 10)}`, w / 2, gameOverPanelY + 580);
-                
-                // Draw action buttons - dipindahkan ke bawah
-                const buttonY = gameOverPanelY + 700;
-                const buttonSize = 120;
-                const buttonSpacing = 100;
-                const buttonStartX = panelX + (panelWidth - (3 * buttonSize + 2 * buttonSpacing)) / 2;
-                
-                // Home button
-                if (panelHomeImage.complete) {
-                    canvasCtx.drawImage(
-                        panelHomeImage,
-                        buttonStartX,
-                        buttonY,
-                        buttonSize,
-                        buttonSize
-                    );
-                }
-                
-                // Restart button
-                if (panelRestartImage.complete) {
-                    canvasCtx.drawImage(
-                        panelRestartImage,
-                        buttonStartX + buttonSize + buttonSpacing,
-                        buttonY,
-                        buttonSize,
-                        buttonSize
-                    );
-                }
-                
-                // Next level button
-                if (panelNextLevelImage.complete) {
-                    canvasCtx.drawImage(
-                        panelNextLevelImage,
-                        buttonStartX + 2 * (buttonSize + buttonSpacing),
-                        buttonY,
-                        buttonSize,
-                        buttonSize
-                    );
-                }
-                
-                canvasCtx.textAlign = 'left';
+                showResultScreen();
+                return;
             }
 
         }
@@ -776,19 +698,13 @@
             iceCreams = []; currentConePos = null;
             lastSpawnTime = Date.now();
             
-            // // Reset countdown state
-            // countdownActive = false;
-            // countdownStartTime = 0;
-            // countdownStep = 0;
-            
             // Reset game over panel state
             gameOverPanelActive = false;
             gameOverAnimationStart = 0;
-            gameOverPanelY = -900;
 
             dispenser = {
-                x: null, // Posisi X akan benar karena kanvas sudah ada ukurannya
-                y: 80,                     // Posisi Y di atas (sesuaikan)
+                x: null,
+                y: 80,
                 targetX: null,
                 speed: 7,
                 state: 'IDLE',
@@ -796,8 +712,8 @@
                 image: dispenserImage,
                 currentFrame: 0,
                 frameCount: 3,
-                frameWidth: 4784,       // Lebar SATU frame
-                frameHeight: 1440,      // Tinggi SATU frame (4784 / 3)
+                frameWidth: 4784,
+                frameHeight: 1440,
                 animationSpeed: 100,
                 lastFrameTime: 0
             };
@@ -812,19 +728,19 @@
                 // Optimasi untuk performa lebih cepat
                 hands.setOptions({ 
                     maxNumHands: 2, 
-                    modelComplexity: 0,        // Tetap 0 (paling cepat)
-                    minDetectionConfidence: 0.5,  // Turunkan dari 0.7 ke 0.5
-                    minTrackingConfidence: 0.5,   // Turunkan dari 0.7 ke 0.5
-                    staticImageMode: false,       // Pastikan false untuk video
-                    selfieMode: true             // Optimasi untuk selfie mode
+                    modelComplexity: 0,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5,
+                    staticImageMode: false,
+                    selfieMode: true
                 });
                 hands.onResults(onResults);
             }
-            if (!camera) { // Inisialisasi hanya sekali
+            if (!camera) { 
                 camera = new window.Camera(videoElement, {
                     onFrame: async () => await hands.send({ image: videoElement }),
-                    width: 640, height: 480,  // Turunkan resolusi dari 1280x720 ke 640x480
-                    facingMode: 'user'        // Pastikan menggunakan front camera
+                    width: 640, height: 480, 
+                    facingMode: 'user'
                 });
             }
             
@@ -837,6 +753,56 @@
             if (camera) {
                 camera.stop();
             }
+        }
+
+        function showResultScreen() {
+
+            // Jangan langsung sembunyikan gameScreen, biar kelihatan di belakang popup
+            resultScreen.classList.remove('hidden');
+            
+            const popup = document.getElementById('result-popup');
+            const resultImg = document.getElementById('result-image');
+            const resultStatus = document.getElementById('result-status');
+            const resultScore = document.getElementById('result-score');
+
+            // Reset animasi popup
+            popup.classList.remove('active'); 
+            void popup.offsetWidth; // force reflow biar animasi bisa diulang
+            popup.classList.add('active');
+
+            // Tentukan jumlah bintang
+
+            if (score >= 100){
+                resultImg.src = resultStar3.src
+            }
+            else if (score >= 80) {
+                resultImg.src = resultStar2.src
+            }
+            else if (score >= 60) {
+                resultImg.src = resultStar1.src
+            }
+            else {
+                resultImg.src = resultStar0.src
+            }
+
+            // Teks status
+            if (score >= 60) {
+                resultStatus.textContent = "KERJA BAGUS!";
+                resultStatus.style.color = "#045170";
+            } else {
+                resultStatus.textContent = "COBA LAGI";
+                resultStatus.style.color = "#00446b";
+            }
+
+            // Skor
+            resultScore.textContent = score;
+
+            if (score >= 60) {
+                nextLevelBtn.classList.remove("hidden");
+            } else {
+                nextLevelBtn.classList.add("hidden");
+            }
+
         }
     </script>
 </body>
