@@ -50,6 +50,11 @@
 </head>
 <body>
 
+    <audio id="bgm-mainmenu" src="{{ url_for('static', filename='audio/papan-mainmenu.m4a') }}"></audio>
+    <audio id="bgm-gameplay" src="{{ url_for('static', filename='audio/papan-gameplay.m4a') }}"></audio>
+    <audio id="bgm-win" src="{{ url_for('static', filename='audio/papan-win.m4a') }}"></audio>
+    <audio id="bgm-win-sfx" src="{{ url_for('static', filename='audio/papan-winsfx.m4a') }}"></audio>
+
     <!-- ======================== -->
     <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
     <!-- ======================== -->
@@ -253,6 +258,116 @@
 
 
         let score, gameOver, gameStarted, hands, camera, plank, ball, basket, dispenser, physicsConstants, hiasanAnimasi, hiasanSequenceIndex;
+
+        const AudioManager = (() => {
+        // --- Kategorisasi ---
+        const music = {
+            mainmenu: document.getElementById('bgm-mainmenu'),
+            gameplay: document.getElementById('bgm-gameplay'),
+            winloop: document.getElementById('bgm-win'),
+        };
+
+        const sfx = {
+            winsfx: document.getElementById('bgm-win-sfx'),
+        };
+
+        // --- State ---
+        let musicMuted = false;
+        let sfxMuted = false;
+        let volumeMusic = 1.0;
+        let volumeSfx = 1.0;
+        let currentMusic = null;
+
+        // --- Internal Helpers ---
+        const stopAll = (collection) => {
+            for (const key in collection) {
+                const audio = collection[key];
+                if (!audio.paused) {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }
+            }
+        };
+
+        const setMuteState = (collection, muted) => {
+            for (const key in collection) {
+                collection[key].muted = muted;
+            }
+        };
+
+        // --- Public API ---
+        return {
+            // --- Music Control ---
+            playMusic(name, loop = true) {
+                if (!music[name]) return;
+                stopAll(music);
+                currentMusic = music[name];
+                if (!musicMuted) {
+                    currentMusic.loop = loop;
+                    currentMusic.volume = volumeMusic;
+                    currentMusic.play();
+                }
+            },
+
+            pauseMusic() {
+                if (currentMusic && !currentMusic.paused) {
+                    currentMusic.pause();
+                }
+            },
+
+            resumeMusic() {
+                if (currentMusic && currentMusic.paused && !musicMuted) {
+                    currentMusic.play();
+                }
+            },
+
+            stopMusic() {
+                stopAll(music);
+                currentMusic = null;
+            },
+
+            stopMusicByName(name) {
+                if (music[name]) {
+                    music[name].pause();
+                    music[name].currentTime = 0;
+                    if (currentMusic === music[name]) currentMusic = null;
+                }
+            },
+
+            // --- SFX Control ---
+            playSFX(name) {
+                if (!sfx[name]) return;
+                if (!sfxMuted) {
+                    sfx[name].volume = volumeSfx;
+                    sfx[name].currentTime = 0;
+                    sfx[name].play();
+                }
+            },
+
+            stopSFX(name) {
+                if (sfx[name]) {
+                    sfx[name].pause();
+                    sfx[name].currentTime = 0;
+                }
+            },
+
+            // --- Mute Controls ---
+            muteMusic(state) {
+                musicMuted = state;
+                setMuteState(music, state);
+                if (state) stopAll(music);
+            },
+
+            muteSFX(state) {
+                sfxMuted = state;
+                setMuteState(sfx, state);
+            },
+
+            // --- Getters ---
+            isMusicMuted() { return musicMuted; },
+            isSFXMuted() { return sfxMuted; }
+        };
+        })();
 
         function openFullscreen() {
             const elem = document.documentElement;
@@ -540,6 +655,8 @@
             gameOver = false;
             gameStarted = false;
 
+            AudioManager.playMusic('gameplay');
+
             // DIUBAH: Tambahkan halfWidth dan halfHeight untuk efisiensi
             plank = { x: null, y: null, width: 760, height: 80, angle: 0, halfWidth: 380, halfHeight: 40 };
             ball = { x: null, y: 50, radius: 40, vx: 0, vy: 0, isActive: false };
@@ -595,12 +712,19 @@
         }
 
         function stopGame() {
+            AudioManager.stopMusic();
             if (camera) { camera.stop(); }
         }
 
         // ==========================================
         // INITIALIZATION - Load progress saat start
         // ==========================================
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!menuScreen.classList.contains('hidden')) {
+                AudioManager.playMusic('mainmenu');
+            }
+        });
         populatePlayers();
     </script>
 </body>
