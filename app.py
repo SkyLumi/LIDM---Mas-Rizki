@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect
 
 # Inisialisasi aplikasi Flask
 app = Flask(__name__)
@@ -7,7 +7,7 @@ app = Flask(__name__)
 @app.route('/')
 def menu():
     """Menampilkan halaman daftar game."""
-    return render_template('menu.html')
+    return redirect("https://cloudsup.framer.website/dashboard", code=302)
 
 #------------------------------------------ es krim ------------------------------------
 @app.route('/tangkap-game')
