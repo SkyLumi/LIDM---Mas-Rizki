@@ -36,6 +36,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
+    <audio id="bgm-mainmenu-start" src="{{ url_for('static', filename='audio/tangkap-mainmenu-start.m4a') }}"></audio>
+    <audio id="bgm-mainmenu-loop" src="{{ url_for('static', filename='audio/tangkap-mainmenu-loop.m4a') }}" loop></audio>
+    <audio id="bgm-gameplay" src="{{ url_for('static', filename='audio/tangkap-gameplay.m4a') }}" loop></audio>
+    <audio id="bgm-win-start" src="{{ url_for('static', filename='audio/tangkap-win-start.m4a') }}"></audio>
+    <audio id="bgm-win-loop" src="{{ url_for('static', filename='audio/tangkap-win-loop.m4a') }}" loop></audio>
 
     <!-- ======================== -->
     <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
@@ -303,6 +308,118 @@
                 elem.msRequestFullscreen();
             }
         }
+
+        const AudioManager = (() => {
+            // --- Kategorisasi ---
+            const music = {
+                mainmenuloop: document.getElementById('bgm-mainmenu-loop'),
+                gameplay: document.getElementById('bgm-gameplay'),
+                winloop: document.getElementById('bgm-win-loop'),
+            };
+
+            const sfx = {
+                mainmenustart: document.getElementById('bgm-mainmenu-start'),
+                winstart: document.getElementById('bgm-win-start'),
+            };
+
+            // --- State ---
+            let musicMuted = false;
+            let sfxMuted = false;
+            let volumeMusic = 1.0;
+            let volumeSfx = 1.0;
+            let currentMusic = null;
+
+            // --- Internal Helpers ---
+            const stopAll = (collection) => {
+                for (const key in collection) {
+                    const audio = collection[key];
+                    if (!audio.paused) {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }
+                }
+            };
+
+            const setMuteState = (collection, muted) => {
+                for (const key in collection) {
+                    collection[key].muted = muted;
+                }
+            };
+
+            // --- Public API ---
+            return {
+                // --- Music Control ---
+                playMusic(name, loop = true) {
+                    if (!music[name]) return;
+                    stopAll(music);
+                    currentMusic = music[name];
+                    if (!musicMuted) {
+                        currentMusic.loop = loop;
+                        currentMusic.volume = volumeMusic;
+                        currentMusic.play();
+                    }
+                },
+
+                pauseMusic() {
+                    if (currentMusic && !currentMusic.paused) {
+                        currentMusic.pause();
+                    }
+                },
+
+                resumeMusic() {
+                    if (currentMusic && currentMusic.paused && !musicMuted) {
+                        currentMusic.play();
+                    }
+                },
+
+                stopMusic() {
+                    stopAll(music);
+                    currentMusic = null;
+                },
+
+                stopMusicByName(name) {
+                    if (music[name]) {
+                        music[name].pause();
+                        music[name].currentTime = 0;
+                        if (currentMusic === music[name]) currentMusic = null;
+                    }
+                },
+
+                // --- SFX Control ---
+                playSFX(name) {
+                    if (!sfx[name]) return;
+                    if (!sfxMuted) {
+                        sfx[name].volume = volumeSfx;
+                        sfx[name].currentTime = 0;
+                        sfx[name].play();
+                    }
+                },
+
+                stopSFX(name) {
+                    if (sfx[name]) {
+                        sfx[name].pause();
+                        sfx[name].currentTime = 0;
+                    }
+                },
+
+                // --- Mute Controls ---
+                muteMusic(state) {
+                    musicMuted = state;
+                    setMuteState(music, state);
+                    if (state) stopAll(music);
+                },
+
+                muteSFX(state) {
+                    sfxMuted = state;
+                    setMuteState(sfx, state);
+                },
+
+                // --- Getters ---
+                isMusicMuted() { return musicMuted; },
+                isSFXMuted() { return sfxMuted; }
+            };
+        })();
+
 
         // --- Fungsi-fungsi Gambar ---
         function drawCone(ctx, position) {
@@ -720,6 +837,7 @@
             
             loadingContainer.classList.remove('hidden');
             gameWrapper.classList.add('hidden');
+            AudioManager.playMusic('gameplay');
 
             if (!hands) { // Inisialisasi hanya sekali
                 hands = new window.Hands({
@@ -759,6 +877,7 @@
 
             // Jangan langsung sembunyikan gameScreen, biar kelihatan di belakang popup
             resultScreen.classList.remove('hidden');
+            AudioManager.stopMusicByName('gameplay');
             
             const popup = document.getElementById('result-popup');
             const resultImg = document.getElementById('result-image');
@@ -794,6 +913,15 @@
                 resultStatus.style.color = "#00446b";
             }
 
+            if (score >= 60) {
+                AudioManager.playSFX('winstart');
+                const sfx = document.getElementById('bgm-win-start');
+                sfx.addEventListener('ended', function onEnd() {
+                    AudioManager.playMusic('winloop');
+                    sfx.removeEventListener('ended', onEnd);
+                });
+            }
+
             // Skor
             resultScore.textContent = score;
 
@@ -804,7 +932,27 @@
             }
 
         }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!menuScreen.classList.contains('hidden')) {
+                try {
+                    AudioManager.playSFX('mainmenustart');
+                    const sfx = document.getElementById('bgm-mainmenu-start');
+
+                    sfx.addEventListener('loadedmetadata', () => {
+                        // mulai lagu loop lebih cepat sebelum sfx berakhir
+                        const overlapTime = 0.05;
+                        const delay = (sfx.duration - overlapTime) * 1000;
+
+                        setTimeout(() => {
+                            const next = AudioManager.playMusic('mainmenuloop');
+                        }, delay);
+                    });
+                } catch (e) {
+                    console.warn("Autoplay blocked");
+                }
+            }
+        });
     </script>
 </body>
 </html>
-
