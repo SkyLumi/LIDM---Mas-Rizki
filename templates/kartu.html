@@ -39,11 +39,11 @@
         /* Gaya untuk kartu memori - Disesuaikan untuk 3x2 */
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             column-gap: 3rem;
             row-gap: 2.5rem;
             padding: 1rem;
-            max-width: 800px; /* Lebar maksimal lebih kecil */
+            max-width: 600px; /* Lebar maksimal lebih kecil */
             width: 90%;
             margin: auto;
         }
@@ -85,6 +85,10 @@
             background-image: url("/static/kartu_img/kartu_kebalik.png");
             background-size: cover;
             background-position: center;
+        }
+
+        .card-back.pernah-dibuka {
+             background-image: url("{{ url_for('static', filename='kartu_img/kartu_kebalik_no_love.png') }}");
         }
 
         .card-front {
@@ -344,6 +348,7 @@
         const playAgainBtn = document.getElementById('play-again-btn');
         const loadingContainer = document.getElementById('loading-container');
 
+
         playBtn.addEventListener('click', () => {
             menuScreen.classList.add('hidden');
             levelScreen.classList.remove('hidden');
@@ -411,6 +416,15 @@
             { id: 'beatroot', src: "{{ url_for('static', filename='kartu_img/beatroot.png') }}" },
         ];
 
+        let resultStar0 = new Image();
+        resultStar0.src = "{{ url_for('static', filename='eskrim_img/bintang0.png') }}";
+        let resultStar1 = new Image();
+        resultStar1.src = "{{ url_for('static', filename='eskrim_img/bintang1.png') }}";
+        let resultStar2 = new Image();
+        resultStar2.src = "{{ url_for('static', filename='eskrim_img/bintang2.png') }}";
+        let resultStar3 = new Image();
+        resultStar3.src = "{{ url_for('static', filename='eskrim_img/bintang3.png') }}";
+
         let flippedCards = [], matchedPairs = 0, moves = 0, timer = null, seconds = 0;
         let isBoardLocked = false;
         let currentHover = {
@@ -418,7 +432,7 @@
             startTime: null
         };
         const HOVER_DURATION = 1500;
-        const PAIRS_IN_GAME = 3;
+        const PAIRS_IN_GAME = 2;
 
         let lastCursorPosition = { x: 0, y: 0 };
         let hoverCheckInterval = null;
@@ -614,7 +628,13 @@
         }
         
         function unflipCards() {
-            flippedCards.forEach(card => card.classList.remove('flipped'));
+            flippedCards.forEach(card => {
+                card.classList.remove('flipped')
+                const cardBack = card.querySelector('.card-back'); 
+                if (cardBack) {
+                    cardBack.classList.add('pernah-dibuka'); // Tambah kelas penanda
+                }
+            });
             resetTurn();
         }
 
@@ -693,24 +713,21 @@
             void popup.offsetWidth; // force reflow biar animasi bisa diulang
             popup.classList.add('active');
 
-            // Tentukan jumlah bintang
-            const stars = gameWon ? calculateStars(score, elapsedSeconds) : 0;
-
-            if (score >= 100){
-                resultImg.src = images.resultStar3.src
+            if ( movesCountEl <= 2){
+                resultImg.src = resultStar3.src
             }
-            else if (score >= 80) {
-                resultImg.src = images.resultStar2.src
+            else if ( movesCountEl == 3) {
+                resultImg.src = resultStar2.src
             }
-            else if (score >= 60) {
-                resultImg.src = images.resultStar1.src
+            else if (movesCountEl == 4) {
+                resultImg.src = resultStar1.src
             }
             else {
-                resultImg.src = images.resultStar0.src
+                resultImg.src = resultStar0.src
             }
 
             // Teks status
-            if (stars >= 1) {
+            if (movesCountEl <= 4) {
                 resultStatus.textContent = "KERJA BAGUS!";
                 resultStatus.style.color = "#045170";
             } else {
@@ -719,22 +736,14 @@
             }
 
             // Skor
-            resultScore.textContent = score;
+            resultScore.textContent = movesCountEl;
 
-            if (score >= 60) {
+            if (movesCountEl <= 4) {
                 nextLevelBtn.classList.remove("hidden");
             } else {
                 nextLevelBtn.classList.add("hidden");
             }
 
-            if (playerProgress[3].unlocked){
-                nextLevelBtn.classList.add("hidden");
-            }
-
-            // Simpan progress
-            if (score >= 60) {
-                unlockNextLevel(currentLevel);
-            }
         }
 
         // ==========================================

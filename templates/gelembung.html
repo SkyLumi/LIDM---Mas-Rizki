@@ -10,10 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        body { font-family: 'Inter', sans-serif; overflow: hidden; background: black;}
         /* Kontainer untuk setiap "layar" */
         .screen {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
@@ -28,6 +28,17 @@
             width: 100%; 
             height: 100%; 
             object-fit: cover;
+        }
+
+        #game-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 1920px;   /* resolusi dasar desainmu */
+            height: 1080px;  /* resolusi dasar desainmu */
+            transform: translate(-50%, -50%);
+            transform-origin: center center;
+            background-color: black;
         }
 
         #result-popup {
@@ -85,273 +96,275 @@
     <audio id="bgm-pop-explode" src="{{ url_for('static', filename='audio/gelebung-pop-explode.m4a') }}"></audio>
     <audio id="bgm-pop" src="{{ url_for('static', filename='audio/gelembung-popup.mp3') }}"></audio>
 
-    <!-- ======================== -->
-    <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
-    <!-- ======================== -->
-    <!-- Overlay Pemain -->
-    <div id="player-overlay" 
-        class="absolute top-0 right-0 w-[1000px] h-[160px] z-50 flex font-[Raleway] text-white overflow-hidden shadow-lg hidden">
+    <div id="game-container">
+        <!-- ======================== -->
+        <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
+        <!-- ======================== -->
+        <!-- Overlay Pemain -->
+        <div id="player-overlay" 
+            class="absolute top-0 right-0 w-[1000px] h-[160px] z-50 flex font-[Raleway] text-white overflow-hidden shadow-lg hidden">
 
-    <!-- Kiri: Baru saja bermain -->
-    <div class="w-2/4 bg-[#084EC5] flex flex-col justify-center px-6">
-        <p class="font-bold text-3xl mb-2 tracking-wide">Baru saja bermain</p>
-        <div class="flex items-center gap-6">
-        <img id="player-avatar" 
-            src="{{ url_for('static', filename='gelembung_img/avatar-placeholder.png') }}" 
-            alt="avatar" 
-            class="w-20 h-20 border-white/40 object-cover" />
-        <span id="recent-player-name" 
-                class="font-semibold text-2xl">Hana Sharifah</span>
-        </div>
-    </div>
-
-    <!-- Kanan: Pemain yang tersedia -->
-    <div class="w-3/4 bg-[#0D469B] flex flex-col justify-center px-7">
-        <p class="font-bold text-3xl mb-5 tracking-wide">Pemain yang tersedia</p>
-        <div class="flex items-center gap-5">
-        
-        <!-- Dropdown pemain -->
-        <div class="relative">
-            <select id="player-dropdown" 
-                    class="text-black text-lg px-3 py-2 appearance-none focus:outline-none bg-white pr-10 min-w-[300px] min-h-[56px] font-[Raleway]">
-            <option class="text-black text-lg font-[Raleway]">Ahmad Ridho</option>
-            </select>
-            <div class="absolute inset-y-0 right-0 flex items-center px-2 bg-red-600 pointer-events-none">
-            <svg class="w-4 h-4 text-white fill-current" viewBox="0 0 20 20">
-                <path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/>
-            </svg>
+        <!-- Kiri: Baru saja bermain -->
+        <div class="w-2/4 bg-[#084EC5] flex flex-col justify-center px-6">
+            <p class="font-bold text-3xl mb-2 tracking-wide">Baru saja bermain</p>
+            <div class="flex items-center gap-6">
+            <img id="player-avatar" 
+                src="{{ url_for('static', filename='gelembung_img/avatar-placeholder.png') }}" 
+                alt="avatar" 
+                class="w-20 h-20 border-white/40 object-cover" />
+            <span id="recent-player-name" 
+                    class="font-semibold text-2xl">Hana Sharifah</span>
             </div>
         </div>
 
-        <!-- Tombol Ganti Pemain -->
-        <button id="change-player-btn" 
-                class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-3 flex items-center gap-2 transition text-lg font-[Raleway]">
-            <img src="{{ url_for('static', filename='gelembung_img/shuffle.png') }}" 
-                alt="Shuffle Icon" 
-                class="w-8 h-8 object-contain" />
-            <span class="">Ganti Pemain</span>
-        </button>
-
-        </div>
-    </div>
-    </div>
-
-    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/bg.jpg') }}');">
-        <div class="relative w-full h-full flex items-center justify-center">
-            <!-- Panel Menu Utama -->
-            <!-- TAMBAHKAN 'relative' DI SINI untuk menjadi acuan posisi tombol -->
-            <div class="relative w-full max-w-8xl flex flex-col items-center">
-                <img src="{{ url_for('static', filename='gelembung_img/titlebox.png') }}" alt="Menu Utama" class="w-10/12 z-10">
-
-                <!-- Kontainer Tombol-Tombol -->
-                <!-- GANTI class positioningnya dengan 'absolute' -->
-                <div class="absolute bottom-12 md:bottom-16 left-0 right-0 flex justify-center gap-4 w-full z-20">
-                    <button id="play-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
-                        <img src="{{ url_for('static', filename='gelembung_img/buttonplay.png') }}" alt="Play" class="pointer-events-none">
-                    </button>
-                    <button id="settings-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
-                        <img src="{{ url_for('static', filename='gelembung_img/buttonpengaturan.png') }}" alt="Pengaturan" class="pointer-events-none">
-                    </button>
-                    <button id="quit-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
-                        <img src="{{ url_for('static', filename='gelembung_img/buttonkeluar.png') }}" alt="Keluar" class="pointer-events-none">
-                    </button>
+        <!-- Kanan: Pemain yang tersedia -->
+        <div class="w-3/4 bg-[#0D469B] flex flex-col justify-center px-7">
+            <p class="font-bold text-3xl mb-5 tracking-wide">Pemain yang tersedia</p>
+            <div class="flex items-center gap-5">
+            
+            <!-- Dropdown pemain -->
+            <div class="relative">
+                <select id="player-dropdown" 
+                        class="text-black text-lg px-3 py-2 appearance-none focus:outline-none bg-white pr-10 min-w-[300px] min-h-[56px] font-[Raleway]">
+                <option class="text-black text-lg font-[Raleway]">Ahmad Ridho</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center px-2 bg-red-600 pointer-events-none">
+                <svg class="w-4 h-4 text-white fill-current" viewBox="0 0 20 20">
+                    <path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/>
+                </svg>
                 </div>
             </div>
 
-        </div>
-    </div>
+            <!-- Tombol Ganti Pemain -->
+            <button id="change-player-btn" 
+                    class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-3 flex items-center gap-2 transition text-lg font-[Raleway]">
+                <img src="{{ url_for('static', filename='gelembung_img/shuffle.png') }}" 
+                    alt="Shuffle Icon" 
+                    class="w-8 h-8 object-contain" />
+                <span class="">Ganti Pemain</span>
+            </button>
 
-    <!-- ======================== -->
-    <!--   LAYAR 1.5: PILIH LEVEL  -->
-    <!-- ======================== -->
-    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/background.jpg') }}');">
-        
-        <!-- Wrapper 'relative' yang mengisi seluruh layar untuk menjadi acuan posisi absolut -->
-        <div class="relative w-full h-full">
-            <!-- Box Level, diposisikan absolut di atas-tengah. Jarak dari atas diubah jadi 15% -->
-            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10/12 max-w-2xl">
-                <img src="{{ url_for('static', filename='gelembung_img/levelbox.png') }}" alt="Pilih Level Box" class="w-full">
-                <button id="levelmenuback-btn"
-                    class="absolute -top-[6%] -right-[5%] z-50 hover:scale-110 transition-transform duration-200">
-                    <img src="{{ url_for('static', filename='gelembung_img/close-button.png') }}"
-                        alt="Kembali" class="w-[100px]" />
+            </div>
+        </div>
+        </div>
+
+        <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/bg.jpg') }}');">
+            <div class="relative w-full h-full flex items-center justify-center">
+                <!-- Panel Menu Utama -->
+                <!-- TAMBAHKAN 'relative' DI SINI untuk menjadi acuan posisi tombol -->
+                <div class="relative w-full max-w-8xl flex flex-col items-center">
+                    <img src="{{ url_for('static', filename='gelembung_img/titlebox.png') }}" alt="Menu Utama" class="w-10/12 z-10">
+
+                    <!-- Kontainer Tombol-Tombol -->
+                    <!-- GANTI class positioningnya dengan 'absolute' -->
+                    <div class="absolute bottom-12 md:bottom-16 left-0 right-0 flex justify-center gap-4 w-full z-20">
+                        <button id="play-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                            <img src="{{ url_for('static', filename='gelembung_img/buttonplay.png') }}" alt="Play" class="pointer-events-none">
+                        </button>
+                        <button id="settings-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                            <img src="{{ url_for('static', filename='gelembung_img/buttonpengaturan.png') }}" alt="Pengaturan" class="pointer-events-none">
+                        </button>
+                        <button id="quit-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                            <img src="{{ url_for('static', filename='gelembung_img/buttonkeluar.png') }}" alt="Keluar" class="pointer-events-none">
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ======================== -->
+        <!--   LAYAR 1.5: PILIH LEVEL  -->
+        <!-- ======================== -->
+        <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='gelembung_img/background.jpg') }}');">
+            
+            <!-- Wrapper 'relative' yang mengisi seluruh layar untuk menjadi acuan posisi absolut -->
+            <div class="relative w-full h-full">
+                <!-- Box Level, diposisikan absolut di atas-tengah. Jarak dari atas diubah jadi 15% -->
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10/12 max-w-2xl">
+                    <img src="{{ url_for('static', filename='gelembung_img/levelbox.png') }}" alt="Pilih Level Box" class="w-full">
+                    <button id="levelmenuback-btn"
+                        class="absolute -top-[6%] -right-[5%] z-50 hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='gelembung_img/close-button.png') }}"
+                            alt="Kembali" class="w-[100px]" />
+                    </button>
+                    <!-- Container Tombol Level, dibuat 'absolute' agar menimpa gambar box -->
+                    <div class="absolute inset-0 flex justify-center items-end gap-6 lg:pb-80">
+                        <button id="level-1-btn" class="transform hover:scale-110 transition-transform duration-200">
+                            <img src="{{ url_for('static', filename='gelembung_img/level1btn-selected.png') }}" alt="Level 1" class="w-24 md:w-32">
+                        </button>
+                        <button id="level-2-btn" class="cursor-not-allowed" disabled>
+                            <img src="{{ url_for('static', filename='gelembung_img/levellock.png') }}" alt="Level 2 Locked" class="w-24 md:w-32 opacity-50">
+                        </button>
+                        <button id="level-3-btn" class="cursor-not-allowed" disabled>
+                            <img src="{{ url_for('static', filename='gelembung_img/levellock.png') }}" alt="Level 3 Locked" class="w-24 md:w-32 opacity-50">
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tutorial-screen" class="screen hidden" style="background-color: rgba(0, 0, 0, 0.7);  z-index: 20;">
+            <div class="flex flex-col items-center gap-8 ">
+                <img id="tutorial-img" src="" alt="Tutorial Cara Bermain" class="w-full">
+                
+                <button id="understand-btn" class="w-1/4 max-w-xs transform hover:scale-110 transition-transform duration-200">
+                    <img src="{{ url_for('static', filename='gelembung_img/mulai_button.png') }}" alt="Lanjutkan">
                 </button>
-                <!-- Container Tombol Level, dibuat 'absolute' agar menimpa gambar box -->
-                <div class="absolute inset-0 flex justify-center items-end gap-6 lg:pb-80">
-                    <button id="level-1-btn" class="transform hover:scale-110 transition-transform duration-200">
-                        <img src="{{ url_for('static', filename='gelembung_img/level1btn-selected.png') }}" alt="Level 1" class="w-24 md:w-32">
-                    </button>
-                    <button id="level-2-btn" class="cursor-not-allowed" disabled>
-                        <img src="{{ url_for('static', filename='gelembung_img/levellock.png') }}" alt="Level 2 Locked" class="w-24 md:w-32 opacity-50">
-                    </button>
-                    <button id="level-3-btn" class="cursor-not-allowed" disabled>
-                        <img src="{{ url_for('static', filename='gelembung_img/levellock.png') }}" alt="Level 3 Locked" class="w-24 md:w-32 opacity-50">
-                    </button>
-                </div>
             </div>
         </div>
-    </div>
 
-    <div id="tutorial-screen" class="screen hidden" style="background-color: rgba(0, 0, 0, 0.7);  z-index: 20;">
-        <div class="flex flex-col items-center gap-8 ">
-            <img id="tutorial-img" src="" alt="Tutorial Cara Bermain" class="w-full">
-            
-            <button id="understand-btn" class="w-1/4 max-w-xs transform hover:scale-110 transition-transform duration-200">
-                <img src="{{ url_for('static', filename='gelembung_img/mulai_button.png') }}" alt="Lanjutkan">
-            </button>
-        </div>
-    </div>
+        <!-- ======================== -->
+        <!--     LAYAR 2: GAMEPLAY      -->
+        <!-- ======================== -->
+        <div id="game-screen" class="screen hidden bg-black" style="z-index: 10;">
+            <div id="loading-container" class="flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow-lg">
+                <div class="loader"></div>
+                <p id="loading-text" class="mt-4 text-gray-700 font-semibold">Menunggu akses kamera...</p>
+            </div>
+            <div id="game-wrapper" class="w-full h-full hidden">
+                <video id="webcam" style="position: absolute; visibility: hidden;" autoplay playsinline></video>
+                <canvas id="gameCanvas"></canvas>
+                <button id="pause-btn"
+                    class="absolute bottom-20 left-20 z-50 hover:scale-110 transition-transform duration-200 hidden">
+                    <img src="{{ url_for('static', filename='gelembung_img/pause-button.png') }}"
+                        alt="Pause" class="w-[150px]" />
+                </button>
 
-    <!-- ======================== -->
-    <!--     LAYAR 2: GAMEPLAY      -->
-    <!-- ======================== -->
-    <div id="game-screen" class="screen hidden bg-black" style="z-index: 10;">
-        <div id="loading-container" class="flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow-lg">
-            <div class="loader"></div>
-            <p id="loading-text" class="mt-4 text-gray-700 font-semibold">Menunggu akses kamera...</p>
-        </div>
-        <div id="game-wrapper" class="w-full h-full hidden">
-            <video id="webcam" style="position: absolute; visibility: hidden;" autoplay playsinline></video>
-            <canvas id="gameCanvas"></canvas>
-            <button id="pause-btn"
-                class="absolute bottom-20 left-20 z-50 hover:scale-110 transition-transform duration-200 hidden">
-                <img src="{{ url_for('static', filename='gelembung_img/pause-button.png') }}"
-                    alt="Pause" class="w-[150px]" />
-            </button>
-
-        </div>
-    </div>
-
-    <!-- ======================== -->
-    <!--     RESULT SCREEN        -->
-    <!-- ======================== -->
-    <div id="result-screen" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-    <div id="result-popup" class="relative flex flex-col items-center transition-all duration-700 ease-out transform -translate-y-full">
-        <!-- Gambar hasil -->
-        <img id="result-image" src="" alt="result background" class="w-[720px] h-auto mx-auto" />
-
-        <!-- Tulisan skor -->
-        <div id="result-text"
-        class="absolute inset-0 flex flex-col items-center justify-center font-['Lilita_One'] text-[#00446b] space-y-2 transform -translate-y-[5%]">
-        
-        <!-- Tulisan utama -->
-        <div id="result-status"
-            class="text-[96px] leading-tight text-[#045170] text-center break-words max-w-[6ch] mx-auto">
-            KERJA BAGUS!
-        </div>
-        
-        <!-- Skor -->
-        <div class="text-[48px] text-[#045170] font-['Raleway'] font-extrabold">
-            Score: <span id="result-score" class="text-[#FE6291] text-[48px] font-['Raleway'] font-bold">0</span>
-        </div>
-        </div>
-
-        <!-- Tombol Home, Retry, dan Next Level -->
-        <div class="absolute bottom-[8%] left-1/2 transform -translate-x-1/2 flex gap-14">
-        <button id="home-btn">
-            <img src="{{ url_for('static', filename='gelembung_img/home-button.png') }}" 
-                alt="Home"
-                class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
-        </button>
-
-        <button id="retry-btn">
-            <img src="{{ url_for('static', filename='gelembung_img/retry-button.png') }}" 
-                alt="Retry"
-                class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
-        </button>
-
-        <button id="nextLevelBtn-btn" class="hidden">
-            <img src="{{ url_for('static', filename='gelembung_img/nextlevel-button.png') }}" 
-                alt="Next Level"
-                class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
-        </button>
-    </div>
-
-    </div>
-    </div>
-
-    <!-- ======================== -->
-    <!--     SETTINGS SCREEN      -->
-    <!-- ======================== -->
-    <!-- Overlay -->
-    <div id="settings-overlay"
-        class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md z-50">
-
-        <!-- Popup -->
-        <div id="settings-popup" class="relative">
-            <img src="{{ url_for('static', filename='gelembung_img/setting-menu.png') }}"
-                alt="Setting Menu"
-                class="w-[730px] h-auto pointer-events-none select-none" />
-
-            <!-- Tombol Close -->
-            <button id="settings-close"
-                class="absolute -top-[5%] -right-[5%] z-10 hover:scale-110 transition-transform duration-200">
-                <img src="{{ url_for('static', filename='gelembung_img/close-button.png') }}"
-                    alt="Close" class="w-[100px]" />
-            </button>
-
-            <!-- Konten -->
-            <div
-                class="absolute inset-0 flex flex-col justify-center items-end pr-24 text-[#00446b] font-['Lilita_One'] text-[36px] space-y-12 z-0 transform translate-y-[10%]">
-
-                <!-- Efek -->
-                <div class="flex gap-10 items-center">
-                    <img id="effect-sound"
-                        src="{{ url_for('static', filename='gelembung_img/sound-active-button.png') }}"
-                        alt="Efek On"
-                        class="w-[120px] cursor-pointer transition-transform hover:scale-110">
-                    <img id="effect-mute"
-                        src="{{ url_for('static', filename='gelembung_img/mute-nonactive-button.png') }}"
-                        alt="Efek Off"
-                        class="w-[120px] cursor-pointer transition-transform hover:scale-110">
-                </div>
-
-                <!-- Musik -->
-                <div class="flex gap-10 items-center">
-                    <img id="music-sound"
-                        src="{{ url_for('static', filename='gelembung_img/sound-active-button.png') }}"
-                        alt="Musik On"
-                        class="w-[120px] cursor-pointer transition-transform hover:scale-110">
-                    <img id="music-mute"
-                        src="{{ url_for('static', filename='gelembung_img/mute-nonactive-button.png') }}"
-                        alt="Musik Off"
-                        class="w-[120px] cursor-pointer transition-transform hover:scale-110">
-                </div>
             </div>
         </div>
-    </div>
 
-    <!-- ======================== -->
-    <!--        PAUSE MENU        -->
-    <!-- ======================== -->
-    <!-- PAUSE MENU OVERLAY -->
-    <div id="pause-overlay" 
-        class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-md flex items-center justify-center z-[60]">
-        <div class="relative">
-            <img src="{{ url_for('static', filename='gelembung_img/pause-menu.png') }}" 
-                alt="Paused" 
-                class="w-[800px] select-none pointer-events-none" />
+        <!-- ======================== -->
+        <!--     RESULT SCREEN        -->
+        <!-- ======================== -->
+        <div id="result-screen" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+        <div id="result-popup" class="relative flex flex-col items-center transition-all duration-700 ease-out transform -translate-y-full">
+            <!-- Gambar hasil -->
+            <img id="result-image" src="" alt="result background" class="w-[720px] h-auto mx-auto" />
+
+            <!-- Tulisan skor -->
+            <div id="result-text"
+            class="absolute inset-0 flex flex-col items-center justify-center font-['Lilita_One'] text-[#00446b] space-y-2 transform -translate-y-[5%]">
             
-            <!-- Tombol Continue -->
-            <button id="pause-continue" 
-                    class="absolute bottom-[18%] left-[30%] transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
-                <img src="{{ url_for('static', filename='gelembung_img/continue-button.png') }}" 
-                    alt="Continue" class="w-[120px]" />
-            </button>
+            <!-- Tulisan utama -->
+            <div id="result-status"
+                class="text-[96px] leading-tight text-[#045170] text-center break-words max-w-[6ch] mx-auto">
+                KERJA BAGUS!
+            </div>
+            
+            <!-- Skor -->
+            <div class="text-[48px] text-[#045170] font-['Raleway'] font-extrabold">
+                Score: <span id="result-score" class="text-[#FE6291] text-[48px] font-['Raleway'] font-bold">0</span>
+            </div>
+            </div>
 
-            <!-- Tombol Home -->
-            <button id="pause-home" 
-                    class="absolute bottom-[18%] left-1/2 transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+            <!-- Tombol Home, Retry, dan Next Level -->
+            <div class="absolute bottom-[8%] left-1/2 transform -translate-x-1/2 flex gap-14">
+            <button id="home-btn">
                 <img src="{{ url_for('static', filename='gelembung_img/home-button.png') }}" 
-                    alt="Home" class="w-[120px]" />
+                    alt="Home"
+                    class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
             </button>
 
-            <!-- Tombol Retry -->
-            <button id="pause-retry" 
-                    class="absolute bottom-[18%] left-[70%] transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+            <button id="retry-btn">
                 <img src="{{ url_for('static', filename='gelembung_img/retry-button.png') }}" 
-                    alt="Retry" class="w-[120px]" />
+                    alt="Retry"
+                    class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
             </button>
+
+            <button id="nextLevelBtn-btn" class="hidden">
+                <img src="{{ url_for('static', filename='gelembung_img/nextlevel-button.png') }}" 
+                    alt="Next Level"
+                    class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
+            </button>
+        </div>
+
+        </div>
+        </div>
+
+        <!-- ======================== -->
+        <!--     SETTINGS SCREEN      -->
+        <!-- ======================== -->
+        <!-- Overlay -->
+        <div id="settings-overlay"
+            class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md z-50">
+
+            <!-- Popup -->
+            <div id="settings-popup" class="relative">
+                <img src="{{ url_for('static', filename='gelembung_img/setting-menu.png') }}"
+                    alt="Setting Menu"
+                    class="w-[730px] h-auto pointer-events-none select-none" />
+
+                <!-- Tombol Close -->
+                <button id="settings-close"
+                    class="absolute -top-[5%] -right-[5%] z-10 hover:scale-110 transition-transform duration-200">
+                    <img src="{{ url_for('static', filename='gelembung_img/close-button.png') }}"
+                        alt="Close" class="w-[100px]" />
+                </button>
+
+                <!-- Konten -->
+                <div
+                    class="absolute inset-0 flex flex-col justify-center items-end pr-24 text-[#00446b] font-['Lilita_One'] text-[36px] space-y-12 z-0 transform translate-y-[10%]">
+
+                    <!-- Efek -->
+                    <div class="flex gap-10 items-center">
+                        <img id="effect-sound"
+                            src="{{ url_for('static', filename='gelembung_img/sound-active-button.png') }}"
+                            alt="Efek On"
+                            class="w-[120px] cursor-pointer transition-transform hover:scale-110">
+                        <img id="effect-mute"
+                            src="{{ url_for('static', filename='gelembung_img/mute-nonactive-button.png') }}"
+                            alt="Efek Off"
+                            class="w-[120px] cursor-pointer transition-transform hover:scale-110">
+                    </div>
+
+                    <!-- Musik -->
+                    <div class="flex gap-10 items-center">
+                        <img id="music-sound"
+                            src="{{ url_for('static', filename='gelembung_img/sound-active-button.png') }}"
+                            alt="Musik On"
+                            class="w-[120px] cursor-pointer transition-transform hover:scale-110">
+                        <img id="music-mute"
+                            src="{{ url_for('static', filename='gelembung_img/mute-nonactive-button.png') }}"
+                            alt="Musik Off"
+                            class="w-[120px] cursor-pointer transition-transform hover:scale-110">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================== -->
+        <!--        PAUSE MENU        -->
+        <!-- ======================== -->
+        <!-- PAUSE MENU OVERLAY -->
+        <div id="pause-overlay" 
+            class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-md flex items-center justify-center z-[60]">
+            <div class="relative">
+                <img src="{{ url_for('static', filename='gelembung_img/pause-menu.png') }}" 
+                    alt="Paused" 
+                    class="w-[800px] select-none pointer-events-none" />
+                
+                <!-- Tombol Continue -->
+                <button id="pause-continue" 
+                        class="absolute bottom-[18%] left-[30%] transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+                    <img src="{{ url_for('static', filename='gelembung_img/continue-button.png') }}" 
+                        alt="Continue" class="w-[120px]" />
+                </button>
+
+                <!-- Tombol Home -->
+                <button id="pause-home" 
+                        class="absolute bottom-[18%] left-1/2 transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+                    <img src="{{ url_for('static', filename='gelembung_img/home-button.png') }}" 
+                        alt="Home" class="w-[120px]" />
+                </button>
+
+                <!-- Tombol Retry -->
+                <button id="pause-retry" 
+                        class="absolute bottom-[18%] left-[70%] transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+                    <img src="{{ url_for('static', filename='gelembung_img/retry-button.png') }}" 
+                        alt="Retry" class="w-[120px]" />
+                </button>
+            </div>
         </div>
     </div>
     <!-- ======================== -->
@@ -1444,6 +1457,21 @@
             }
         });
 
+        function letterboxScale() {
+            const baseWidth = 1920;
+            const baseHeight = 1080;
+
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            const scale = Math.min(windowWidth / baseWidth, windowHeight / baseHeight);
+
+            const container = document.getElementById("game-container");
+            container.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+
+        window.addEventListener("resize", letterboxScale);
+        window.addEventListener("load", letterboxScale);
     </script>
 </body>
 </html>
