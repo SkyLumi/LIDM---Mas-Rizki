@@ -218,12 +218,14 @@
         </div>
         
         <!-- Skor -->
-        <div class="text-[32px] text-white font-['Raleway'] font-extrabold">
-            <div>
-            Score: <span id="result-score" class="text-white text-[32px] font-['Raleway'] font-bold">0</span>
+        <div class="text-[32px] text-white font-['Raleway'] font-extrabold flex flex-col items-center w-full max-w-xs">
+            <div class="flex justify-between w-full">
+                <span>Score:</span>
+                <span id="result-score" class="font-bold">0</span>
             </div>
-            <div>
-            Scoops: <span id="result-scoops" class="text-white text-[32px] font-['Raleway'] font-bold">0</span>
+            <div class="flex justify-between w-full">
+                <span>Scoops:</span>
+                <span id="result-scoops" class="font-bold">0</span>
             </div>
         </div>
         </div>
@@ -231,19 +233,19 @@
         <!-- Tombol Home, Retry, dan Next Level -->
         <div class="absolute bottom-[8%] left-1/2 transform -translate-x-1/2 flex gap-14">
             <button id="home-btn">
-                <img src="{{ url_for('static', filename='gelembung_img/home-button.png') }}" 
+                <img src="{{ url_for('static', filename='eskrim_img/panelhome.png') }}" 
                     alt="Home"
                     class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
             </button>
 
             <button id="retry-btn">
-                <img src="{{ url_for('static', filename='gelembung_img/retry-button.png') }}" 
+                <img src="{{ url_for('static', filename='eskrim_img/panelrestart.png') }}" 
                     alt="Retry"
                     class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
             </button>
 
             <button id="nextLevelBtn-btn" class="hidden">
-                <img src="{{ url_for('static', filename='gelembung_img/nextlevel-button.png') }}" 
+                <img src="{{ url_for('static', filename='eskrim_img/panelnextlevel.png') }}" 
                     alt="Next Level"
                     class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
             </button>
@@ -271,6 +273,8 @@
         const exitGameBtn = document.getElementById('exit-game-btn');
         const understandBtn = document.getElementById('understand-btn');
         const nextLevelBtn = document.getElementById('nextLevelBtn-btn');
+        const homeBtn = document.getElementById('home-btn');
+        const retryBtn = document.getElementById('retry-btn');
 
         const playerOverlay = document.getElementById('player-overlay');
         const recentPlayerName = document.getElementById('recent-player-name');
@@ -300,7 +304,7 @@
         });
 
         quitBtn.addEventListener('click', () => {
-            alert('Tombol Keluar ditekan!');
+            window.location.href = 'https://cloudsup.framer.website/dashboard';
         });
 
         exitGameBtn.addEventListener('click', () => {
@@ -324,6 +328,28 @@
             countdownStep = 0;
         });
 
+        nextLevelBtn.addEventListener('click', () => {
+            stopGame();
+            gameScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            levelScreen.classList.remove('hidden');
+        });
+
+        retryBtn.addEventListener('click', () => {
+            stopGame();
+            resultScreen.classList.add('hidden');
+            tutorialScreen.classList.remove('hidden');
+            startGame();
+        });
+
+        homeBtn.addEventListener('click', () => {
+            stopGame();
+            gameScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            menuScreen.classList.remove('hidden');
+            playerOverlay.classList.remove('hidden');
+        });
+
         changePlayerBtn.addEventListener('click', changePlayer);
 
         // --- Variabel & Referensi Game ---
@@ -341,11 +367,10 @@
         let countdownStep = 0;
         
         // Game Over Panel Animation Variables
-        let gameOverPanelActive = false;
-        let gameOverAnimationStart = 0;
+        let gameOverPanelActive = true;
         
         const smoothingFactor = 0.3;
-        const spawnRate = 6;
+        const spawnRate = 7;
 
         let coneImage = new Image();
         coneImage.src = "{{ url_for('static', filename='eskrim_img/cone.png') }}";
@@ -814,7 +839,7 @@
                     if (dist < 80) {
                         score += 10;
                     } else if (cream.y > h) {
-                        lives -= 1;
+                        lives -= 3;
                     } else {
                         iceCreamsToKeep.push(cream);
                     }
@@ -824,11 +849,6 @@
                 if (lives <= 0) {
                     gameOver = true;
                     lives = 0;
-                    // Start game over panel animation
-                    if (!gameOverPanelActive) {
-                        gameOverPanelActive = true;
-                        gameOverAnimationStart = Date.now();
-                    }
                 }
             }
             
@@ -914,6 +934,7 @@
             // Animated Game Over Panel
             if (gameOver && gameOverPanelActive) {
                 showResultScreen();
+                gameOverPanelActive = false
                 return;
             }
 
@@ -927,8 +948,7 @@
             lastSpawnTime = Date.now();
             
             // Reset game over panel state
-            gameOverPanelActive = false;
-            gameOverAnimationStart = 0;
+            gameOverPanelActive = true;
 
             dispenser = {
                 x: null,
