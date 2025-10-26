@@ -82,6 +82,8 @@
     <audio id="bgm-menubtn-hover" src="{{ url_for('static', filename='audio/gelembung-sfxmenubtn-hover.m4a') }}"></audio>
     <audio id="bgm-sfxwin" src="{{ url_for('static', filename='audio/gelembung-sfxwin.m4a') }}"></audio>
     <audio id="bgm-sfxstartgame" src="{{ url_for('static', filename='audio/gelembung-startgame.m4a') }}"></audio>
+    <audio id="bgm-pop-explode" src="{{ url_for('static', filename='audio/gelebung-pop-explode.m4a') }}"></audio>
+    <audio id="bgm-pop" src="{{ url_for('static', filename='audio/gelembung-popup.mp3') }}"></audio>
 
     <!-- ======================== -->
     <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
@@ -468,6 +470,8 @@
                 menubtnHover: document.getElementById('bgm-menubtn-hover'),
                 sfxwin: document.getElementById('bgm-sfxwin'),
                 sfxstartgame: document.getElementById('bgm-sfxstartgame'),
+                explode: document.getElementById('bgm-pop-explode'),
+                pop: document.getElementById('bgm-pop'),
             };
 
             // --- State ---
@@ -1156,21 +1160,22 @@
                     }
                 }
 
-                // Proses bubble jika kena tangan
                 if (isPopped && !bubble.popping) {
                     bubble.popping = true;
                     bubble.popStartTime = Date.now();
 
                     if (bubble.type === "bomb") {
                         lives -= 1;
+                        AudioManager.playSFX('explode');
                         if (lives <= 0) gameOver = true;
                     } else {
                         score += 10;
+                        AudioManager.playSFX('pop');
                     }
 
                 } else if (
                     !bubble.popping &&
-                    bubble.type !== "bomb" && // ← tambahkan ini!
+                    bubble.type !== "bomb" &&
                     (
                         bubble.y < -100 || bubble.y > h + 100 ||
                         bubble.x < -100 || bubble.x > w + 100
