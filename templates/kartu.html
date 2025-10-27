@@ -132,6 +132,17 @@
                 transform: translate(-50%, -50%) rotate(360deg);
             }
         }
+        
+        #result-popup {
+            opacity: 0;
+            transform: translateY(-80px);
+            transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        #result-popup.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
         /* Loader */
         .loader {
@@ -281,50 +292,33 @@
             &larr; Kembali ke Menu
         </button>
     </div>
-    
-    <!-- ======================== -->
-    <!--     LAYAR 3: MENANG        -->
-    <!-- ======================== -->
-    <div id="win-screen" class="screen hidden bg-black bg-opacity-75 flex-col p-4 z-50">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full">
-             <h2 class="text-5xl font-bold text-green-500 mb-4" style="font-family: 'Luckiest Guy', cursive;">KAMU MENANG!</h2>
-             <p class="text-gray-700 text-lg mb-2">Skor Akhirmu:</p>
-             <div class="mb-6">
-                 <p class="text-xl">Langkah: <span id="win-moves" class="font-bold text-blue-600"></span></p>
-                 <p class="text-xl">Waktu: <span id="win-time" class="font-bold text-blue-600"></span> detik</p>
-             </div>
-             <button id="play-again-btn" class="w-full bg-green-500 text-white font-bold py-3 px-6 rounded-lg text-xl hover:bg-green-600 transition-transform duration-200 transform hover:scale-105">
-                 Main Lagi
-             </button>
-        </div>
-    </div>
 
     <!-- ======================== -->
     <!--     RESULT SCREEN        -->
     <!-- ======================== -->
-    <div id="result-screen" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-    <div id="result-popup" class="relative flex flex-col items-center transition-all duration-700 ease-out transform -translate-y-full">
+    <div id="result-screen" class="hidden fixed inset-0 flex items-center justify-end bg-black bg-opacity-70 z-50">
+    <div id="result-popup" class="relative flex flex-col items-center transition-all duration-700 ease-out">
         <!-- Gambar hasil -->
-        <img id="result-image" src="" alt="result background" class="w-[720px] h-auto mx-auto" />
+        <img id="result-image" src="" alt="result background" class="w-[1600px] h-auto mx-auto" />
 
         <!-- Tombol Home, Retry, dan Next Level -->
-        <div class="absolute bottom-[8%] left-1/2 transform -translate-x-1/2 flex gap-14">
+        <div class="absolute bottom-[30%] left-[40%] transform -translate-x-1/2 flex gap-14">
             <button id="home-btn">
-                <img src="{{ url_for('static', filename='gelembung_img/home-button.png') }}" 
+                <img src="{{ url_for('static', filename='kartu_img/home-btn.png') }}" 
                     alt="Home"
-                    class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
+                    class="w-[120px] h-auto min-w-[100px] hover:scale-110 transition-transform duration-200 object-contain" />
             </button>
 
             <button id="retry-btn">
-                <img src="{{ url_for('static', filename='gelembung_img/retry-button.png') }}" 
+                <img src="{{ url_for('static', filename='kartu_img/retry-btn.png') }}" 
                     alt="Retry"
-                    class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
+                    class="w-[120px] h-auto min-w-[100px] hover:scale-110 transition-transform duration-200 object-contain" />
             </button>
 
             <button id="nextLevelBtn-btn" class="hidden">
-                <img src="{{ url_for('static', filename='gelembung_img/nextlevel-button.png') }}" 
+                <img src="{{ url_for('static', filename='kartu_img/nextlevel-btn.png') }}" 
                     alt="Next Level"
-                    class="w-[150px] h-auto min-w-[150px] hover:scale-110 transition-transform duration-200 object-contain" />
+                    class="w-[120px] h-auto min-w-[100px] hover:scale-110 transition-transform duration-200 object-contain" />
             </button>
         </div>
 
@@ -344,9 +338,10 @@
         const winScreen = document.getElementById('result-screen');
         const playBtn = document.getElementById('play-btn');
         const quitBtn = document.getElementById('quit-btn');
-        const exitGameBtn = document.getElementById('exit-game-btn');
-        const playAgainBtn = document.getElementById('play-again-btn');
+        const exitGameBtn = document.getElementById('home-btn');
+        const playAgainBtn = document.getElementById('retry-btn');
         const loadingContainer = document.getElementById('loading-container');
+        const nextLevelBtn = document.getElementById('nextLevelBtn-btn');
 
 
         playBtn.addEventListener('click', () => {
@@ -368,13 +363,23 @@
 
         exitGameBtn.addEventListener('click', () => {
             stopGame();
+            winScreen.classList.add('hidden');
             gameScreen.classList.add('hidden');
+            playerOverlay.classList.remove('hidden');
             menuScreen.classList.remove('hidden');
         });
         
         playAgainBtn.addEventListener('click', () => {
+            stopGame();
             winScreen.classList.add('hidden');
             startGame();
+        });
+
+        nextLevelBtn.addEventListener('click', () => {
+            stopGame();
+            winScreen.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            levelScreen.classList.remove('hidden');
         });
 
         // --- Variabel & Referensi Game ---
@@ -417,13 +422,13 @@
         ];
 
         let resultStar0 = new Image();
-        resultStar0.src = "{{ url_for('static', filename='eskrim_img/bintang0.png') }}";
+        resultStar0.src = "{{ url_for('static', filename='kartu_img/bintang0.png') }}";
         let resultStar1 = new Image();
-        resultStar1.src = "{{ url_for('static', filename='eskrim_img/bintang1.png') }}";
+        resultStar1.src = "{{ url_for('static', filename='kartu_img/bintang1.png') }}";
         let resultStar2 = new Image();
-        resultStar2.src = "{{ url_for('static', filename='eskrim_img/bintang2.png') }}";
+        resultStar2.src = "{{ url_for('static', filename='kartu_img/bintang2.png') }}";
         let resultStar3 = new Image();
-        resultStar3.src = "{{ url_for('static', filename='eskrim_img/bintang3.png') }}";
+        resultStar3.src = "{{ url_for('static', filename='kartu_img/bintang3.png') }}";
 
         let flippedCards = [], matchedPairs = 0, moves = 0, timer = null, seconds = 0;
         let isBoardLocked = false;
@@ -692,53 +697,41 @@
         
         function endGame() {
             stopGame();
-            winMovesEl.textContent = moves;
-            winTimeEl.textContent = seconds;
+            // winMovesEl.textContent = moves;
+            // winTimeEl.textContent = seconds;
             setTimeout(() => {
-                winScreen.classList.remove('hidden');
+                showResultScreen();
             }, 500);
         }
 
         function showResultScreen() {
 
-            resultScreen.classList.remove('hidden');
+            winScreen.classList.remove('hidden');
             
             const popup = document.getElementById('result-popup');
             const resultImg = document.getElementById('result-image');
-            const resultStatus = document.getElementById('result-status');
-            const resultScore = document.getElementById('result-score');
+
 
             // Reset animasi popup
             popup.classList.remove('active'); 
             void popup.offsetWidth; // force reflow biar animasi bisa diulang
             popup.classList.add('active');
 
-            if ( movesCountEl <= 2){
+            if ( moves <= 2){
                 resultImg.src = resultStar3.src
             }
-            else if ( movesCountEl == 3) {
+            else if ( moves == 3) {
                 resultImg.src = resultStar2.src
             }
-            else if (movesCountEl == 4) {
+            else if (moves == 4) {
                 resultImg.src = resultStar1.src
             }
             else {
                 resultImg.src = resultStar0.src
             }
 
-            // Teks status
-            if (movesCountEl <= 4) {
-                resultStatus.textContent = "KERJA BAGUS!";
-                resultStatus.style.color = "#045170";
-            } else {
-                resultStatus.textContent = "COBA LAGI";
-                resultStatus.style.color = "#00446b";
-            }
-
             // Skor
-            resultScore.textContent = movesCountEl;
-
-            if (movesCountEl <= 4) {
+            if (moves <= 4) {
                 nextLevelBtn.classList.remove("hidden");
             } else {
                 nextLevelBtn.classList.add("hidden");
