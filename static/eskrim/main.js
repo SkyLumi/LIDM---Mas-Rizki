@@ -1,5 +1,8 @@
-import { Game } from "phaser";
-import { Preloader } from "./scenes/preloadImage";
+import { Game } from "./scenes/game.js";
+import { Preloader } from "./scenes/preloader.js";
+import { MainMenu } from "./scenes/mainMenu.js";
+import { LevelMenu } from "./scenes/levelMenu.js";
+import { Result } from "./scenes/result.js";
 
 const config = {
     type: Phaser.AUTO,
@@ -13,6 +16,9 @@ const config = {
     scene: [
         Game,
         Preloader,
+        MainMenu,
+        LevelMenu,
+        Result,
     ],
     scale: {
         mode: Phaser.Scale.FIT,
@@ -21,8 +27,3 @@ const config = {
 }
 
 new Phaser.Game(config);
-
-let hands = null;
-let camera = null;
-let leftPinPos = { x: config.width / 4, y: config.height / 2 };
-let rightPinPos = { x: config.width * 3 / 4, y: config.height / 2 };

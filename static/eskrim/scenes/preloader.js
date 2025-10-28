@@ -18,7 +18,7 @@ export class Preloader extends Phaser.Scene {
         this.load.image('levelLockedBtn', 'static/eskrim_img/level-locked-btn.png')
         
         // ----             Tutorial               ----
-        this.load.image('')
+        this.load.image('tutorialPanel', )
         this.load.image('playTutorialBtn', 'static/eskrim_img/mulai_button.png')
         
 

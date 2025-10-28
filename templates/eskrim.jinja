@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #webcam {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+        #phaser-game canvas {
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 1;
+        }
+        #player-overlay {
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <audio id="bgm-mainmenu-start" src="..."></audio>
+    <div id="player-overlay" class="...">
+        </div>
+
+    <video id="webcam" class="hidden" autoplay playsinline></video>
+    
+    <div id="phaser-game"></div>
+
+    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/preloader.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/mainMenu.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/levelMenu.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/game.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/result.js') }}"></script>
+    
+    <script type="module" src="{{ url_for('static', filename='eskrim/main.js') }}"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
-export class LevelSelect extends Phaser.Scene {
+export class LevelMenu extends Phaser.Scene {
 
     constructor() {
-        super('LevelSelect')
+        super('LevelMenu')
     }
 
     create() {

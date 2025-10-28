@@ -13,7 +13,7 @@ def menu():
 @app.route('/tangkap-game')
 def tangkap_game():
     """Menampilkan halaman game."""
-    return render_template('eskrim.html')
+    return render_template('eskrim.jinja')
 
 #------------------------------------------ gelembung ------------------------------------
 
