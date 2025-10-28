@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tangkap Rasa</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
         body { margin: 0; overflow: hidden; }
         #webcam {
@@ -21,20 +27,9 @@
     </style>
 </head>
 <body>
-    <audio id="bgm-mainmenu-start" src="..."></audio>
-    <div id="player-overlay" class="...">
-        </div>
-
     <video id="webcam" class="hidden" autoplay playsinline></video>
-    
-    <div id="phaser-game"></div>
-
-    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/preloader.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/mainMenu.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/levelMenu.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/game.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='eskrim/scenes/result.js') }}"></script>
-    
+    <div id="game-container"></div>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script type="module" src="{{ url_for('static', filename='eskrim/main.js') }}"></script>
 </body>
 </html>

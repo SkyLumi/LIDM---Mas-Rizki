@@ -13,11 +13,17 @@ const config = {
     height: 1080,
     backgroundColor: '#000000',
     pixelArt: false,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 0 },
+        }
+    },
     scene: [
-        Game,
         Preloader,
         MainMenu,
         LevelMenu,
+        Game,
         Result,
     ],
     scale: {

@@ -45,7 +45,7 @@ export class Game extends Phaser.Scene {
 
         // 5. Setup Audio
         this.sound.stopAll(); // Matikan musik menu
-        this.sound.play('bgm-gameplay', { loop: true });
+        // this.sound.play('bgm-gameplay', { loop: true });
     }
 
     update(time, delta) {
