@@ -20,19 +20,19 @@ def tangkap_game():
 @app.route('/gelembung-game')
 def gelembung_game():
     """Menampilkan halaman game."""
-    return render_template('gelembung.html')
+    return render_template('gelembung.jinja')
 
 #------------------------------------------ papan ------------------------------------
 
 @app.route('/papan-game')
 def papan_game():
     """Menampilkan halaman game."""
-    return render_template('papan.html')
+    return render_template('papan.jinja')
 
 @app.route('/kartu-game')
 def kartu_game():
     """Menampilkan halaman game."""
-    return render_template('kartu.html')
+    return render_template('kartu.jinja')
 
 # Menjalankan server saat script dieksekusi
 if __name__ == '__main__':

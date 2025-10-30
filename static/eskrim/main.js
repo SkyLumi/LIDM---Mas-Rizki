@@ -11,6 +11,7 @@ const config = {
     parent: 'game-container',
     width: 1920,
     height: 1080,
+    transparent: true,
     backgroundColor: '#000000',
     pixelArt: false,
     physics: {
@@ -32,4 +33,39 @@ const config = {
     },
 }
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config)
+
+const video = document.getElementById('webcam')
+
+function matchVideoToCanvas() {
+    
+    const canvas = document.querySelector('#game-container canvas')
+    
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    
+    video.style.position = 'fixed'
+    video.style.top = `${rect.top}px`
+    video.style.left = `${rect.left}px`
+    video.style.width = `${rect.width}px`
+    video.style.height = `${rect.height}px`
+    
+    video.style.objectFit = 'cover'
+    video.style.zIndex = -1
+    video.style.visibility = 'visible'
+    video.style.transform = 'scaleX(-1)'
+}
+
+game.events.on('ready', () => {
+    
+    matchVideoToCanvas();
+    
+    game.scale.on('resize', matchVideoToCanvas);
+    
+    document.addEventListener('fullscreenchange', () => {
+        console.log('F11 ATAU FULLSCREEN API TERPENCET!');
+        setTimeout(matchVideoToCanvas, 100);
+    });
+    
+});

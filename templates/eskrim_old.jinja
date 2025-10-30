@@ -195,6 +195,45 @@
             </button>
             <video id="webcam" class="hidden" autoplay playsinline></video>
             <canvas id="gameCanvas"></canvas>
+            <button id="pause-btn"
+                class="absolute bottom-20 left-20 z-50 hover:scale-110 transition-transform duration-200 hidden">
+                <img src="{{ url_for('static', filename='gelembung_img/pause-button.png') }}"
+                    alt="Pause" class="w-[150px]" />
+            </button>
+        </div>
+    </div>
+
+        <!-- ======================== -->
+    <!--        PAUSE MENU        -->
+    <!-- ======================== -->
+    <!-- PAUSE MENU OVERLAY -->
+    <div id="pause-overlay" 
+        class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-md flex items-center justify-center z-[60]">
+        <div class="relative">
+            <img src="{{ url_for('static', filename='gelembung_img/pause-menu.png') }}" 
+                alt="Paused" 
+                class="w-[800px] select-none pointer-events-none" />
+            
+            <!-- Tombol Continue -->
+            <button id="pause-continue" 
+                    class="absolute bottom-[18%] left-[30%] transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+                <img src="{{ url_for('static', filename='gelembung_img/continue-button.png') }}" 
+                    alt="Continue" class="w-[120px]" />
+            </button>
+
+            <!-- Tombol Home -->
+            <button id="pause-home" 
+                    class="absolute bottom-[18%] left-1/2 transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+                <img src="{{ url_for('static', filename='gelembung_img/home-button.png') }}" 
+                    alt="Home" class="w-[120px]" />
+            </button>
+
+            <!-- Tombol Retry -->
+            <button id="pause-retry" 
+                    class="absolute bottom-[18%] left-[70%] transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+                <img src="{{ url_for('static', filename='gelembung_img/retry-button.png') }}" 
+                    alt="Retry" class="w-[120px]" />
+            </button>
         </div>
     </div>
 
@@ -275,6 +314,8 @@
         const nextLevelBtn = document.getElementById('nextLevelBtn-btn');
         const homeBtn = document.getElementById('home-btn');
         const retryBtn = document.getElementById('retry-btn');
+        const pauseOverlay = document.getElementById('pause-overlay');
+        const pauseBtn = document.getElementById('pause-btn');
 
         const playerOverlay = document.getElementById('player-overlay');
         const recentPlayerName = document.getElementById('recent-player-name');
@@ -348,6 +389,10 @@
             resultScreen.classList.add('hidden');
             menuScreen.classList.remove('hidden');
             playerOverlay.classList.remove('hidden');
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            pauseOverlay.classList.remove('hidden');
         });
 
         changePlayerBtn.addEventListener('click', changePlayer);
