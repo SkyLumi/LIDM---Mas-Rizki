@@ -4,6 +4,10 @@ export class Preloader extends Phaser.Scene {
     }
 
     preload() {
+        // ----              Font                ----
+        this.load.font('lilita-one', 'static/assets/font/LilitaOne-Regular.ttf', 'truetype');
+
+
         // ----             Main Menu               ----
         this.load.image('menuBG', 'static/assets/eskrim_img/mainMenuPage.png')
         this.load.image('titleBox', 'static/assets/eskrim_img/title-box.png')

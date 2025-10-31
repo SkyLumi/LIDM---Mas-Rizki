@@ -3,6 +3,7 @@ import { Preloader } from "./scenes/preloader.js";
 import { MainMenu } from "./scenes/mainMenu.js";
 import { LevelMenu } from "./scenes/levelMenu.js";
 import { Result } from "./scenes/result.js";
+import { Pause } from "./scenes/pause.js";
 
 const config = {
     type: Phaser.AUTO,
@@ -25,6 +26,7 @@ const config = {
         MainMenu,
         LevelMenu,
         Game,
+        Pause,
         Result,
     ],
     scale: {
