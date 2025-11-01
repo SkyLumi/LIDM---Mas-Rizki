@@ -1,7 +1,7 @@
-import { Game } from "./scenes/game.js";
 import { Preloader } from "./scenes/preloader.js";
 import { MainMenu } from "./scenes/mainMenu.js";
 import { LevelMenu } from "./scenes/levelMenu.js";
+import { Game } from "./scenes/game.js";
 import { Result } from "./scenes/result.js";
 import { Pause } from "./scenes/pause.js";
 
@@ -32,6 +32,11 @@ const config = {
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    plugins: {
+        global: [
+        { key: 'SceneWatcher', plugin: PhaserSceneWatcherPlugin, start: true }
+        ]
     },
 }
 

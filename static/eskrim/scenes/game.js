@@ -1,3 +1,5 @@
+import MediaPipeManager from "./mediapipeManager.js";
+
 export class Game extends Phaser.Scene {
     
     constructor() {
@@ -7,15 +9,15 @@ export class Game extends Phaser.Scene {
         this.smoothingFactor = 0.3;
 
         this.hands = null;
-        this.videoElement = null;
-        
-        this.gameTimeRemaining = 80;
-        
+
         this.cone = null;
         this.iceCreams = null;
         this.scoreText = null;
         this.spawnTimer = null;
         this.camera = null;
+        this.iceCreamFill = null;
+        this.maxScore = 100;
+        this.barFullHeight = 0;
     }
 
     create() {
@@ -24,13 +26,15 @@ export class Game extends Phaser.Scene {
         let screenCenterX = width / 2;
         let screenCenterY = height / 2;
 
+        this.videoElement = document.getElementById('webcam')
+        this.mediapipe = new MediaPipeManager(this.videoElement, this.onMediaPipeResults.bind(this));
+
+        this.gameTimeRemaining = 80;
         this.score = 0;
         this.maxLives = 3;
         this.currentLives = this.maxLives;
         this.lifeIcons = [];
         this.gameOver = false;
-        
-        this.videoElement = document.getElementById('webcam')
 
         this.add.image(screenCenterX, 0, 'machinery')
             .setOrigin(0.5, 0)
@@ -47,27 +51,28 @@ export class Game extends Phaser.Scene {
         })
 
         // --- Animasi Es Krim --- ///
-        this.anims.create({
-            key: 'iceCreamFall_anim',
-            frames: this.anims.generateFrameNumbers('iceCreamFall', { start: 0, end: -1 }),
-            frameRate: 10,
-            repeat: -1
-        });
+        if (!this.anims.exists('iceCreamFall_anim')) {
+            this.anims.create({
+                key: 'iceCreamFall_anim',
+                frames: this.anims.generateFrameNumbers('iceCreamFall', { start: 0, end: -1 }),
+                frameRate: 10,
+                repeat: -1
+            })
+        }
 
-        this.anims.create({
-            key: 'dispenserArm_anim',
-            frames: this.anims.generateFrameNumbers('dispenserArm', { start: 0, end: -1 }),
-            frameRate: 10,
-            repeat: 0
-        });
+        if (!this.anims.exists('dispenserArm_anim')) {
+            this.anims.create({
+                key: 'dispenserArm_anim',
+                frames: this.anims.generateFrameNumbers('dispenserArm', { start: 0, end: -1 }),
+                frameRate: 10,
+                repeat: 0
+            })
+        }
 
         // --- Detek collider Es krim dengan cone nya
         this.physics.add.overlap(this.cone, this.iceCreams, this.handleCatch, null, this);
 
         this.targetConePos = { x: width / 2, y: height - 100 }
-
-        // --- Deteksi Tangan dan enable Camera ---
-        this.initMediaPipe()
 
         this.dispenserArm = this.add.sprite(screenCenterX, -100, 'dispenserArm')
             .setOrigin(0.08, 0)
@@ -93,6 +98,11 @@ export class Game extends Phaser.Scene {
 
         this.add.image(width - 200, 150, 'boxLife')
             .setScale(1)
+
+        this.iceCreamFill = this.add.image(width - 110, screenCenterY + 58, 'scoreFillBar')
+            .setScale(0.75)
+        this.barFullHeight = this.iceCreamFill.height;
+        this.iceCreamFill.setCrop(0, this.barFullHeight, this.iceCreamFill.width, 0);
 
         this.add.image(width - 140, screenCenterY + 100, 'scorePanel')
             .setScale(1.2)
@@ -127,9 +137,25 @@ export class Game extends Phaser.Scene {
             loop: true
         });
 
+        pauseButton.on('pointerover', () => {
+            this.tweens.add({
+                targets: pauseButton,
+                scale: 0.9,
+                duration: 100,
+                ease: 'Power1'
+            });
+        });
+
+        pauseButton.on('pointerout', () => {
+            this.tweens.add({
+                targets: pauseButton,
+                scale: 0.8,
+                duration: 100,
+                ease: 'Power1'
+            });
+        });
+
         pauseButton.on('pointerdown', () => {
-            pauseButton.disableInteractive();
-            this.cameras.main.setPostPipeline('Blur');
             this.scene.pause('Game'); 
             this.scene.launch('Pause');
         });
@@ -137,6 +163,9 @@ export class Game extends Phaser.Scene {
         // 5. Setup Audio
         // this.sound.stopAll(); // Matikan musik menu
         // this.sound.play('bgm-gameplay', { loop: true });
+
+        this.events.once('shutdown', this.shutdown, this)
+
     }
 
     update(time, delta) {
@@ -173,6 +202,7 @@ export class Game extends Phaser.Scene {
         this.scoreText.setText(this.score)
 
         cream.destroy()
+        this.updateFillBar();
 
         if (this.score >= 100) {
             this.endGame()
@@ -181,15 +211,13 @@ export class Game extends Phaser.Scene {
     
     endGame() {
         this.gameOver = true
-        
-        if (this.camera) this.camera.stop()
         this.videoElement.classList.add('hidden')
-        
         this.scene.start('Result', { score: this.score })
     }
     
     onMediaPipeResults(results) {
-        
+
+        if (!this.sys || !this.sys.game) return;
         const { width, height } = this.sys.game.config;
 
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
@@ -215,35 +243,6 @@ export class Game extends Phaser.Scene {
         }
     }
 
-    initMediaPipe() {
-        this.hands = new window.Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
-        
-        this.hands.setOptions({
-            maxNumHands: 2,
-            modelComplexity: 0,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5,
-            selfieMode: true
-        });
-
-        // Set callback 'onResults'
-        this.hands.onResults((results) => this.onMediaPipeResults(results));
-
-        this.camera = new window.Camera(this.videoElement, {
-            onFrame: async () => {
-                await this.hands.send({ image: this.videoElement });
-            },
-            width: 640, height: 480,
-            facingMode: 'user',
-        });
-        
-        this.camera.start().catch(err => {
-            console.error("Gagal mengakses kamera", err);
-        });
-    }
-
     jatuhinEsKrim() {
         const { width } = this.sys.game.config;
         
@@ -265,6 +264,18 @@ export class Game extends Phaser.Scene {
         });
     }
 
+    updateFillBar() {
+        const scorePercent = Math.min(this.score / this.maxScore, 1);
+        const newCropHeight = this.barFullHeight * scorePercent;
+        const newCropY = this.barFullHeight - newCropHeight;
+        this.iceCreamFill.setCrop(
+            0,
+            newCropY,
+            this.iceCreamFill.width,
+            newCropHeight
+        );
+    }
+
     updateTimer() {
         this.gameTimeRemaining--;
         this.timerText.setText(this.formatTime(this.gameTimeRemaining));
@@ -280,5 +291,10 @@ export class Game extends Phaser.Scene {
         const partInSeconds = seconds % 60;
         const partInSecondsFormatted = partInSeconds.toString().padStart(2, '0');
         return `${minutes}:${partInSecondsFormatted}`;
+    }
+
+    shutdown() {
+        console.log('clearing mediapipe')
+        this.mediapipe.destroy()
     }
 }

@@ -4,35 +4,56 @@ export class Pause extends Phaser.Scene {
     }
 
     create() {
-        const { width, height } = this.sys.game.config;
+        const { width, height } = this.sys.game.config
 
-        this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+        let screenCenterX = width / 2
+        let screenCenterY = height / 2
+
+        this.add.rectangle(screenCenterX, screenCenterY, width, height, 0x000000, 0.7)
             .setInteractive()
             .on('pointerdown', () => {});
 
-        this.add.text(width / 2, height / 2 - 100, 'PAUSED', {
+        this.add.image(screenCenterX - 10, 0, 'pausePanel')
+            .setScale(0.6)
+            .setOrigin(0.5, 0.4);
+
+        this.add.text(screenCenterX, screenCenterY - 50, 'Paused', {
             fontFamily: 'lilita-one',
             fontSize: '96px',
             fill: '#ffffff'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5)
 
-        const resumeButton = this.add.image(width / 2, height / 2 + 50, 'resumeBtn')
+        let panelContainer = this.add.container(screenCenterX, screenCenterY + 150)
+
+        const resumeButton = this.add.image(-150, 0, 'panelNextLevel')
             .setInteractive()
-            .setScale(0.5);
+            .setScale(2)
 
         resumeButton.on('pointerdown', () => {
-            this.scene.stop();
-            this.scene.resume('Game');
+            this.scene.stop()
+            this.scene.resume('Game')
         });
 
-        const menuButton = this.add.image(width / 2, height / 2 + 150, 'menuBtn')
+        const restartButton = this.add.image(0, 0, 'panelRestart')
             .setInteractive()
-            .setScale(0.5);
+            .setScale(2)
+
+        restartButton.on('pointerdown', () => {
+            this.scene.stop()
+            this.scene.stop('Game')
+            this.scene.start('Game')
+        });
+
+        const menuButton = this.add.image(150, 0, 'panelHome')
+            .setInteractive()
+            .setScale(2)
 
         menuButton.on('pointerdown', () => {
-            this.scene.stop();
-            this.scene.stop('Game');
-            this.scene.start('MainMenu');
+            this.scene.stop()
+            this.scene.stop('Game')
+            this.scene.start('MainMenu')
         });
+
+        panelContainer.add([resumeButton, restartButton, menuButton])
     }
 }

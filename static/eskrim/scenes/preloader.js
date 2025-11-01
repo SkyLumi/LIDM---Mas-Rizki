@@ -39,8 +39,18 @@ export class Preloader extends Phaser.Scene {
         })
         this.load.image('pauseBtn', 'static/assets/eskrim_img/pause_button.png')
         this.load.image('scorePanel', 'static/assets/eskrim_img/score-panel.png')
+        this.load.image('scoreFillBar', 'static/assets/eskrim_img/Fillicecreambar.png')
 
-        
+        // ----              Pause PopUp               ----
+        this.load.image('pausePanel', 'static/assets/eskrim_img/pause-popup.png')
+        this.load.image('panelHome', 'static/assets/eskrim_img/panelhome.png')
+        this.load.image('panelRestart', 'static/assets/eskrim_img/panelrestart.png')
+        this.load.image('panelNextLevel', 'static/assets/eskrim_img/panelnextlevel.png')
+
+        // ----             Game Over               ----
+        this.load.image('gameOverPanel','static/assets/eskrim_img/gameover-panel.png')
+
+
         this.load.audio('bgm-main-start', 'static/assets/audio/tangkap-mainmenu-start.m4a')
         this.load.audio('bgm-main-loop', 'static/assets/audio/tangkap-mainmenu-loop.m4a')
         this.load.audio('bgm-gameplay', 'static/assets/audio/tangkap-gameplay.m4a')
