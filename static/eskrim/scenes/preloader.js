@@ -5,8 +5,8 @@ export class Preloader extends Phaser.Scene {
 
     preload() {
         // ----              Font                ----
-        this.load.font('lilita-one', 'static/assets/font/LilitaOne-Regular.ttf', 'truetype');
-
+        this.load.font('lilita-one', 'static/assets/font/LilitaOne-Regular.ttf', 'truetype')
+        this.load.font('raleway', 'static/assets/font/Raleway-Regular.ttf', 'truetype')
 
         // ----             Main Menu               ----
         this.load.image('menuBG', 'static/assets/eskrim_img/mainMenuPage.png')
@@ -49,6 +49,7 @@ export class Preloader extends Phaser.Scene {
 
         // ----             Game Over               ----
         this.load.image('gameOverPanel','static/assets/eskrim_img/gameover-panel.png')
+        this.load.image('bintang', 'static/assets/eskrim_img/bintang.png')
 
 
         this.load.audio('bgm-main-start', 'static/assets/audio/tangkap-mainmenu-start.m4a')
@@ -59,6 +60,6 @@ export class Preloader extends Phaser.Scene {
     }
 
     create() {
-        this.scene.start('Game')
+        this.scene.start('Result')
     }
 }

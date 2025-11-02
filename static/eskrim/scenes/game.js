@@ -211,8 +211,8 @@ export class Game extends Phaser.Scene {
     
     endGame() {
         this.gameOver = true
-        this.videoElement.classList.add('hidden')
-        this.scene.start('Result', { score: this.score })
+        this.scene.pause()
+        this.scene.launch('Result', { score: this.score })
     }
     
     onMediaPipeResults(results) {

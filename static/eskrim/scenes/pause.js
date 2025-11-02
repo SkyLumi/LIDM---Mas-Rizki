@@ -9,7 +9,7 @@ export class Pause extends Phaser.Scene {
         let screenCenterX = width / 2
         let screenCenterY = height / 2
 
-        this.add.rectangle(screenCenterX, screenCenterY, width, height, 0x000000, 0.7)
+        this.add.rectangle(screenCenterX, screenCenterY, width, height, 0x000000, 0.5)
             .setInteractive()
             .on('pointerdown', () => {});
 
