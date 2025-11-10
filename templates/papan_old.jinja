@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tangkap Rasa - Edisi Keseimbangan (Optimized)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        .screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s;
+        }
+        .hidden { display: none; }
+        
+        /* DIUBAH: Atur posisi canvas di atas video */
+        #game-wrapper { position: relative; width: 100%; height: 100%; }
+        #webcam, #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        /* DIUBAH: Balik video secara horizontal agar seperti cermin */
+        #webcam { transform: scaleX(-1); }
+        /* DIUBAH: Pastikan canvas di lapisan paling atas */
+        #gameCanvas { z-index: 5; }
+
+        #result-popup {
+            opacity: 0;
+            transform: translateY(-80px);
+            transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        #result-popup.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #result-text {
+            text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        #settings-overlay {
+            transition: opacity 0.3s ease;
+        }
+        #settings-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader {
+            border: 8px solid #f3f3f3; border-top: 8px solid #3498db;
+            border-radius: 50%; width: 60px; height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <audio id="bgm-mainmenu" src="{{ url_for('static', filename='audio/papan-mainmenu.m4a') }}"></audio>
+    <audio id="bgm-gameplay" src="{{ url_for('static', filename='audio/papan-gameplay.m4a') }}"></audio>
+    <audio id="bgm-win" src="{{ url_for('static', filename='audio/papan-win.m4a') }}"></audio>
+    <audio id="bgm-win-sfx" src="{{ url_for('static', filename='audio/papan-winsfx.m4a') }}"></audio>
+
+    <!-- ======================== -->
+    <!--     LAYAR 1: MENU UTAMA (Versi Multi-Layer) -->
+    <!-- ======================== -->
+    <!-- Overlay Pemain -->
+    <div id="player-overlay" 
+        class="absolute top-0 right-0 w-[1000px] h-[160px] z-50 flex font-[Raleway] text-white overflow-hidden shadow-lg">
+
+    <!-- Kiri: Baru saja bermain -->
+    <div class="w-2/4 bg-[#084EC5] flex flex-col justify-center px-6">
+        <p class="font-bold text-3xl mb-2 tracking-wide">Baru saja bermain</p>
+        <div class="flex items-center gap-6">
+        <img id="player-avatar" 
+            src="{{ url_for('static', filename='gelembung_img/avatar-placeholder.png') }}" 
+            alt="avatar" 
+            class="w-20 h-20 border-white/40 object-cover" />
+        <span id="recent-player-name" 
+                class="font-semibold text-2xl">Hana Sharifah</span>
+        </div>
+    </div>
+
+    <!-- Kanan: Pemain yang tersedia -->
+    <div class="w-3/4 bg-[#0D469B] flex flex-col justify-center px-7">
+        <p class="font-bold text-3xl mb-5 tracking-wide">Pemain yang tersedia</p>
+        <div class="flex items-center gap-5">
+        
+        <!-- Dropdown pemain -->
+        <div class="relative">
+            <select id="player-dropdown" 
+                    class="text-black text-lg px-3 py-2 appearance-none focus:outline-none bg-white pr-10 min-w-[300px] min-h-[56px] font-[Raleway]">
+            <option class="text-black text-lg font-[Raleway]">Ahmad Ridho</option>
+            </select>
+            <div class="absolute inset-y-0 right-0 flex items-center px-2 bg-red-600 pointer-events-none">
+            <svg class="w-4 h-4 text-white fill-current" viewBox="0 0 20 20">
+                <path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/>
+            </svg>
+            </div>
+        </div>
+
+        <!-- Tombol Ganti Pemain -->
+        <button id="change-player-btn" 
+                class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-3 flex items-center gap-2 transition text-lg font-[Raleway]">
+            <img src="{{ url_for('static', filename='gelembung_img/shuffle.png') }}" 
+                alt="Shuffle Icon" 
+                class="w-8 h-8 object-contain" />
+            <span class="">Ganti Pemain</span>
+        </button>
+
+        </div>
+    </div>
+    </div>
+
+    <div id="menu-screen" class="screen bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='papan_img/backgrounds.png') }}');">
+        <div class="relative w-full h-full flex items-center justify-center">
+            <div class="relative w-full max-w-8xl flex flex-col items-center">
+                <img src="{{ url_for('static', filename='papan_img/titleBox.png') }}" alt="Menu Utama" class="w-8/12 z-10 -mt-64">
+                <div class="absolute bottom-12 md:bottom-8 left-0 right-0 flex justify-center gap-2 w-full z-20"> 
+                    <button id="play-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='papan_img/tombolPlay.png') }}" alt="Play" class="pointer-events-none w-full h-full object-contain">
+                    </button>
+                    <button id="settings-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='papan_img/tombolPengaturan.png') }}" alt="Pengaturan" class="pointer-events-none w-full h-full object-contain">
+                    </button>
+                    <button id="quit-btn" class="w-1/6 transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='papan_img/tombolKeluar.png') }}" alt="Keluar" class="pointer-events-none w-full h-full object-contain">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="level-screen" class="fixed top-0 left-0 w-full h-full hidden bg-cover bg-center" style="background-image: url('{{ url_for('static', filename='papan_img/backgrounds.png') }}');">
+        <div class="relative w-full h-full">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10/12 max-w-2xl">
+                <img src="{{ url_for('static', filename='papan_img/levelbox.png') }}" alt="Pilih Level Box" class="w-full">
+                <button id="levelmenuback-btn"
+                    class="absolute -top-[3%] -right-[5%] z-50 hover:scale-110 transition-transform duration-200">
+                    <img src="{{ url_for('static', filename='papan_img/close-btn.png') }}"
+                        alt="Kembali" class="w-[120px]" />
+                </button>
+                <div class="absolute inset-0 flex justify-center items-end gap-6 lg:pb-56">
+                        <button id="level-1-btn" class="transform hover:scale-110 transition-transform duration-200">
+                        <img src="{{ url_for('static', filename='papan_img/level1btn.png') }}" alt="Level 1" class="w-24 md:w-32">
+                    </button>
+                    <button id="level-2-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='papan_img/levelLockedbtn.png') }}" alt="Level 2 Locked" class="w-24 md:w-32 opacity-50">
+                    </button>
+                    <button id="level-3-btn" class="cursor-not-allowed" disabled>
+                        <img src="{{ url_for('static', filename='papan_img/levelLockedbtn.png') }}" alt="Level 3 Locked" class="w-24 md:w-32 opacity-50">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="tutorial-screen" class="screen hidden fixed inset-0 flex flex-col items-center justify-start" style="background-color: rgba(0, 0, 0, 0.7);  z-index: 20;">
+        <div class="flex flex-col items-center w-11/12 md:max-w-7xl">
+            <img src="{{ url_for('static', filename='papan_img/tutorial.png') }}" alt="Tutorial Cara Bermain" class="w-full">
+            
+            <button id="understand-btn" class="w-3/4 max-w-xs transform hover:scale-110 transition-transform duration-200 -mt-24">
+                <img src="{{ url_for('static', filename='papan_img/mulai_button.png') }}" alt="Lanjutkan">
+            </button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen hidden bg-gray-800" style="z-index: 10;">
+        <div id="loading-container" class="flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow-lg">
+            <div class="loader"></div>
+            <p id="loading-text" class="mt-4 text-gray-700 font-semibold">Menunggu akses kamera...</p>
+        </div>
+        <div id="game-wrapper" class="w-full h-full hidden">
+            <button id="exit-game-btn" class="absolute top-4 left-4 z-10 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm">
+                &larr; Keluar
+            </button>
+            <video id="webcam" autoplay playsinline></video>
+            <canvas id="gameCanvas"></canvas>
+            <button id="pause-btn"
+                class="absolute bottom-20 left-20 z-50 hover:scale-110 transition-transform duration-200 hidden">
+                <img src="{{ url_for('static', filename='papan_img/pause-btn.png') }}"
+                    alt="Pause" class="w-[150px]" />
+            </button>
+        </div>
+    </div>
+
+    <!-- ======================== -->
+    <!--     RESULT SCREEN        -->
+    <!-- ======================== -->
+    <div id="result-screen"
+        class="hidden fixed inset-0 flex items-start justify-center bg-black bg-opacity-70 z-50 pt-[0%]">
+
+        <div id="result-popup"
+            class="relative flex flex-col items-center transition-all duration-700 ease-out transform -translate-y-0">
+
+            <!-- Papan hasil -->
+            <div class="relative">
+            <img id="result-image"
+                src="{{ url_for('static', filename='papan_img/result-board.png') }}"
+                alt="result background"
+                class="w-[960px] h-auto mx-auto" />
+
+            <!-- Tulisan skor -->
+            <div id="result-text"
+                class="absolute top-[48%] left-1/2 -translate-x-1/2 flex flex-col items-center font-['Lilita_One'] text-[#00446b] space-y-4">
+                
+                <!-- Tulisan utama -->
+                <div id="result-status"
+                class="text-[72px] leading-tight text-[#f6d56c] text-center drop-shadow-[15px_15px_0_#7A0806] font-['Alfa_Slab_One']">
+                KERJA BAGUS!
+                </div>
+
+                <!-- Skor -->
+                <div class="text-[64px] text-[#EDCB21] font-['Lilita_One'] drop-shadow-[5px_5px_0_#7A0806]">
+                Score:
+                <span id="result-score"
+                    class="ml-[24px] text-[#ffffff] text-[48px] font-['Lilita_One'] font-bold drop-shadow-[2px_2px_0_#00446b]">750</span>
+                </div>
+            </div>
+
+            <!-- Tombol Home, Retry, dan Next Level -->
+            <div class="absolute bottom-[0%] left-1/2 -translate-x-1/2 flex gap-10 translate-y-[20%]">
+                <button id="home-btn">
+                <img src="{{ url_for('static', filename='papan_img/home-btn.png') }}"
+                    alt="Home"
+                    class="w-[160px] hover:scale-110 transition-transform duration-200 object-contain" />
+                </button>
+
+                <button id="retry-btn">
+                <img src="{{ url_for('static', filename='papan_img/retry-btn.png') }}"
+                    alt="Retry"
+                    class="w-[160px] hover:scale-110 transition-transform duration-200 object-contain" />
+                </button>
+
+                <button id="nextLevel-btn" class="hidden">
+                <img src="{{ url_for('static', filename='papan_img/continue-btn.png') }}"
+                    alt="Next Level"
+                    class="w-[160px] hover:scale-110 transition-transform duration-200 object-contain" />
+                </button>
+            </div>
+            </div>
+        </div>
+        </div>
+
+
+    <!-- ======================== -->
+    <!--     SETTINGS SCREEN      -->
+    <!-- ======================== -->
+    <!-- Overlay -->
+    <div id="settings-overlay"
+        class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md z-50">
+
+        <!-- Popup -->
+        <div id="settings-popup" class="relative">
+            <img src="{{ url_for('static', filename='papan_img/setting-menu.png') }}"
+                alt="Setting Menu"
+                class="w-[730px] h-auto pointer-events-none select-none" />
+
+            <!-- Tombol Close -->
+            <button id="settings-close"
+                class="absolute -top-[2%] -right-[5%] z-10 hover:scale-110 transition-transform duration-200">
+                <img src="{{ url_for('static', filename='papan_img/close-btn.png') }}"
+                    alt="Close" class="w-[120px]" />
+            </button>
+
+            <!-- Konten -->
+            <div
+                class="absolute inset-0 flex flex-col justify-center items-end pr-28 text-[#00446b] font-['Lilita_One'] text-[36px] space-y-16 z-0 transform translate-y-[8%]">
+
+                <!-- Efek -->
+                <div class="flex gap-10 items-center">
+                    <img id="effect-sound"
+                        src="{{ url_for('static', filename='papan_img/sound-active-button.png') }}"
+                        alt="Efek On"
+                        class="w-[120px] cursor-pointer transition-transform hover:scale-110">
+                    <img id="effect-mute"
+                        src="{{ url_for('static', filename='papan_img/mute-nonactive-button.png') }}"
+                        alt="Efek Off"
+                        class="w-[120px] cursor-pointer transition-transform hover:scale-110">
+                </div>
+
+                <!-- Musik -->
+                <div class="flex gap-10 items-center">
+                    <img id="music-sound"
+                        src="{{ url_for('static', filename='papan_img/sound-active-button.png') }}"
+                        alt="Musik On"
+                        class="w-[120px] cursor-pointer transition-transform hover:scale-110">
+                    <img id="music-mute"
+                        src="{{ url_for('static', filename='papan_img/mute-nonactive-button.png') }}"
+                        alt="Musik Off"
+                        class="w-[120px] cursor-pointer transition-transform hover:scale-110">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== -->
+    <!--        PAUSE MENU        -->
+    <!-- ======================== -->
+    <!-- PAUSE MENU OVERLAY -->
+    <div id="pause-overlay" 
+        class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-md flex items-center justify-center z-[60]">
+        <div class="relative">
+            <img src="{{ url_for('static', filename='gelembung_img/pause-menu.png') }}" 
+                alt="Paused" 
+                class="w-[800px] select-none pointer-events-none" />
+            
+            <!-- Tombol Continue -->
+            <button id="pause-continue" 
+                    class="absolute bottom-[18%] left-[30%] transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+                <img src="{{ url_for('static', filename='gelembung_img/continue-button.png') }}" 
+                    alt="Continue" class="w-[120px]" />
+            </button>
+
+            <!-- Tombol Home -->
+            <button id="pause-home" 
+                    class="absolute bottom-[18%] left-1/2 transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+                <img src="{{ url_for('static', filename='gelembung_img/home-button.png') }}" 
+                    alt="Home" class="w-[120px]" />
+            </button>
+
+            <!-- Tombol Retry -->
+            <button id="pause-retry" 
+                    class="absolute bottom-[18%] left-[70%] transform -translate-x-1/2 hover:scale-110 transition-transform duration-200">
+                <img src="{{ url_for('static', filename='gelembung_img/retry-button.png') }}" 
+                    alt="Retry" class="w-[120px]" />
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- MANAJEMEN LAYAR & NAVIGASI ---
+        const menuScreen = document.getElementById('menu-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const levelScreen = document.getElementById('level-screen')
+        const tutorialScreen = document.getElementById('tutorial-screen');
+        const playBtn = document.getElementById('play-btn');
+        const understandBtn = document.getElementById('understand-btn');
+        const homeBtn = document.getElementById('home-btn');
+        const retryBtn = document.getElementById('retry-btn');
+        const nextLevelBtn = document.getElementById("nextLevel-btn");
+        const resultScreen = document.getElementById('result-screen');
+        const level1Btn = document.getElementById('level-1-btn')
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const closeSettings = document.getElementById('settings-close');
+        const effectSound = document.getElementById('effect-sound');
+        const effectMute = document.getElementById('effect-mute');
+        const musicSound = document.getElementById('music-sound');
+        const musicMute = document.getElementById('music-mute');
+        const levelmenuClose = document.getElementById('levelmenuback-btn');
+        const quitBtn = document.getElementById('quit-btn');
+        const exitGameBtn = document.getElementById('exit-game-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const pauseOverlay = document.getElementById('pause-overlay');
+        const pauseContinue = document.getElementById('pause-continue');
+        const pauseHome = document.getElementById('pause-home');
+        const pauseRetry = document.getElementById('pause-retry');
+        const playerOverlay = document.getElementById('player-overlay');
+        const recentPlayerName = document.getElementById('recent-player-name');
+        const playerAvatar = document.getElementById('player-avatar');
+        const playerDropdown = document.getElementById('player-dropdown');
+        const changePlayerBtn = document.getElementById('change-player-btn');
+
+        const players = [
+            { name: "Hana Sharifah", avatar: "{{ url_for('static', filename='gelembung_img/avatar-placeholder.png') }}" },
+            { name: "Danentara Kusuma", avatar: "{{ url_for('static', filename='gelembung_img/avatar-placeholder.png') }}" },
+            { name: "Arkana Al-Husna", avatar: "{{ url_for('static', filename='gelembung_img/avatar-placeholder.png') }}" },
+            { name: "Ananda Mikhail", avatar: "{{ url_for('static', filename='gelembung_img/avatar-placeholder.png') }}" },
+            { name: "Agil Jordi Wardhana", avatar: "{{ url_for('static', filename='gelembung_img/avatar-placeholder.png') }}" },
+        ];
+        
+        let currentPlayer = players[0];
+        let timeLeft = 3;
+
+        playBtn.addEventListener('click', () => {
+            menuScreen.classList.add('hidden');
+            levelScreen.classList.remove('hidden');
+            playerOverlay.classList.add('hidden');
+            openFullscreen() 
+        });
+        settingsBtn.addEventListener('click', () => {
+            settingsOverlay.classList.remove('hidden');
+            settingsOverlay.classList.add('show');
+        });
+
+        effectSound.addEventListener('click', () => {
+            if (AudioManager.isSFXMuted()) {
+                AudioManager.muteSFX(false);
+                effectSound.src = "{{ url_for('static', filename='papan_img/sound-active-button.png') }}";
+                effectMute.src = "{{ url_for('static', filename='papan_img/mute-nonactive-button.png') }}";
+            }
+        });
+
+        effectMute.addEventListener('click', () => {
+            if (!AudioManager.isSFXMuted()) {
+                AudioManager.muteSFX(true);
+                effectSound.src = "{{ url_for('static', filename='papan_img/sound-nonactive-button.png') }}";
+                effectMute.src = "{{ url_for('static', filename='papan_img/mute-active-button.png') }}";
+            }
+        });
+
+        // === TOGGLE MUSIC ===
+        musicSound.addEventListener('click', () => {
+            if (AudioManager.isMusicMuted()) {
+                AudioManager.muteMusic(false);
+                musicSound.src = "{{ url_for('static', filename='papan_img/sound-active-button.png') }}";
+                musicMute.src = "{{ url_for('static', filename='papan_img/mute-nonactive-button.png') }}";
+                AudioManager.playMusic('mainmenu');
+            }
+        });
+
+        musicMute.addEventListener('click', () => {
+            if (!AudioManager.isMusicMuted()) {
+                AudioManager.muteMusic(true);
+                musicSound.src = "{{ url_for('static', filename='papan_img/sound-nonactive-button.png') }}";
+                musicMute.src = "{{ url_for('static', filename='papan_img/mute-active-button.png') }}";
+                AudioManager.stopMusic()
+            }
+        });
+
+        // === CLOSE BUTTON ===
+        closeSettings.addEventListener('click', () => {
+            AudioManager.playSFX('closebtn');
+            settingsOverlay.classList.add('hidden');
+        });
+
+        levelmenuClose.addEventListener('click', () => {
+            playerOverlay.classList.remove('hidden');
+            levelScreen.classList.add('hidden');
+            menuScreen.classList.remove('hidden');
+        });
+
+        quitBtn.addEventListener('click', () => {
+            AudioManager.playSFX('menubtnClick');
+            window.location.href = 'https://cloudsup.framer.website/dashboard';
+        });
+
+        exitGameBtn.addEventListener('click', () => {
+            stopGame();
+            gameScreen.classList.add('hidden');
+            menuScreen.classList.remove('hidden');
+        });
+        level1Btn.addEventListener('click', () => {
+            levelScreen.classList.add('hidden');
+            tutorialScreen.classList.remove('hidden');
+            gameScreen.classList.remove('hidden');
+            startGame();
+        });
+
+        understandBtn.addEventListener('click', () => {
+            tutorialScreen.classList.add('hidden');
+            gameStarted = true;
+        });
+
+        homeBtn.addEventListener('click', () => {
+            stopGame();
+            AudioManager.stopMusic();
+            resultScreen.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            levelScreen.classList.remove('hidden');
+            playerOverlay.classList.remove('hidden');
+            AudioManager.playMusic('mainmenu');
+        });
+
+        retryBtn.addEventListener('click', () => {
+            AudioManager.stopMusic()
+            resultScreen.classList.add('hidden');
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            playerOverlay.classList.add('hidden');
+            pauseOverlay.classList.remove('hidden');
+            AudioManager.pauseMusic();
+        });
+
+        //pauseContinue.addEventListener('click', () => {
+        //
+        //});
+
+        //pauseHome.addEventListener('click', () => {
+        //
+        //});
+
+        //pauseRetry.addEventListener('click', () => {
+        //
+        //});
+
+        changePlayerBtn.addEventListener('click', changePlayer);
+
+
+        // --- Variabel & Referensi Game ---
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('gameCanvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const loadingContainer = document.getElementById('loading-container');
+        const loadingText = document.getElementById('loading-text');
+        const gameWrapper = document.getElementById('game-wrapper');
+
+        let plankImage = new Image();
+        plankImage.src = "{{ url_for('static', filename='papan_img/papan.png') }}";
+        let ballImage = new Image();
+        ballImage.src = "{{ url_for('static', filename='papan_img/bola.png') }}";
+        let basketImage = new Image();
+        basketImage.src = "{{ url_for('static', filename='papan_img/bucket.png') }}";
+        let machineryImage = new Image();
+        machineryImage.src = "{{ url_for('static', filename='papan_img/topbar.png') }}";
+        let dispenserImage = new Image();
+        dispenserImage.src = "{{ url_for('static', filename='papan_img/dropPointandGear.png') }}";
+        let hiasanPojokImage = new Image();
+        hiasanPojokImage.src = "{{ url_for('static', filename='papan_img/leftbar.png') }}";
+        let countdown3Image = new Image();
+        countdown3Image.src = "{{ url_for('static', filename='papan_img/3.png') }}";
+        let countdown2Image = new Image();
+        countdown2Image.src = "{{ url_for('static', filename='papan_img/2.png') }}";
+        let countdown1Image = new Image();
+        countdown1Image.src = "{{ url_for('static', filename='papan_img/1.png') }}";
+        //let countdownGoImage = new Image();
+        //countdownGoImage.src = "{{ url_for('static', filename='papan_img/GO.png') }}";
+        let result0Star = new Image();
+        result0Star.src = "{{ url_for('static', filename='papan_img/result-0star.png') }}";
+        let result1Star = new Image();
+        result1Star.src = "{{ url_for('static', filename='papan_img/result-1star.png') }}";
+        let result2Star = new Image();
+        result2Star.src = "{{ url_for('static', filename='papan_img/result-2star.png') }}";
+        let result3Star = new Image();
+        result3Star.src = "{{ url_for('static', filename='papan_img/result-3star.png') }}";
+
+        let score, gameOver, gameStarted, hands, camera, plank, ball, basket, dispenser, physicsConstants, hiasanAnimasi, hiasanSequenceIndex;
+
+        const AudioManager = (() => {
+        // --- Kategorisasi ---
+        const music = {
+            mainmenu: document.getElementById('bgm-mainmenu'),
+            gameplay: document.getElementById('bgm-gameplay'),
+            winloop: document.getElementById('bgm-win'),
+        };
+
+        const sfx = {
+            winsfx: document.getElementById('bgm-win-sfx'),
+        };
+
+        // --- State ---
+        let musicMuted = false;
+        let sfxMuted = false;
+        let volumeMusic = 1.0;
+        let volumeSfx = 1.0;
+        let currentMusic = null;
+
+        // --- Internal Helpers ---
+        const stopAll = (collection) => {
+            for (const key in collection) {
+                const audio = collection[key];
+                if (!audio.paused) {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }
+            }
+        };
+
+        const setMuteState = (collection, muted) => {
+            for (const key in collection) {
+                collection[key].muted = muted;
+            }
+        };
+
+        // --- Public API ---
+        return {
+            // --- Music Control ---
+            playMusic(name, loop = true) {
+                if (!music[name]) return;
+                stopAll(music);
+                currentMusic = music[name];
+                if (!musicMuted) {
+                    currentMusic.loop = loop;
+                    currentMusic.volume = volumeMusic;
+                    currentMusic.play();
+                }
+            },
+
+            pauseMusic() {
+                if (currentMusic && !currentMusic.paused) {
+                    currentMusic.pause();
+                }
+            },
+
+            resumeMusic() {
+                if (currentMusic && currentMusic.paused && !musicMuted) {
+                    currentMusic.play();
+                }
+            },
+
+            stopMusic() {
+                stopAll(music);
+                currentMusic = null;
+            },
+
+            stopMusicByName(name) {
+                if (music[name]) {
+                    music[name].pause();
+                    music[name].currentTime = 0;
+                    if (currentMusic === music[name]) currentMusic = null;
+                }
+            },
+
+            // --- SFX Control ---
+            playSFX(name) {
+                if (!sfx[name]) return;
+                if (!sfxMuted) {
+                    sfx[name].volume = volumeSfx;
+                    sfx[name].currentTime = 0;
+                    sfx[name].play();
+                }
+            },
+
+            stopSFX(name) {
+                if (sfx[name]) {
+                    sfx[name].pause();
+                    sfx[name].currentTime = 0;
+                }
+            },
+
+            // --- Mute Controls ---
+            muteMusic(state) {
+                musicMuted = state;
+                setMuteState(music, state);
+                if (state) stopAll(music);
+            },
+
+            muteSFX(state) {
+                sfxMuted = state;
+                setMuteState(sfx, state);
+            },
+
+            // --- Getters ---
+            isMusicMuted() { return musicMuted; },
+            isSFXMuted() { return sfxMuted; }
+        };
+        })();
+
+        function openFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) elem.requestFullscreen();
+            else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+        }
+
+        function populatePlayers() {
+            playerDropdown.innerHTML = "";
+            players.forEach((p) => {
+                const option = document.createElement('option');
+                option.value = p.name;
+                option.textContent = p.name;
+                playerDropdown.appendChild(option);
+            });
+        }
+
+        function changePlayer() {
+            const selected = playerDropdown.value;
+            const player = players.find(p => p.name === selected);
+            if (player) {
+                currentPlayer = player;
+                recentPlayerName.textContent = player.name;
+                playerAvatar.src = player.avatar;
+
+                // Optional: mainkan efek klik
+                if (typeof AudioManager !== "undefined") {
+                    AudioManager.playSFX('menubtnClick');
+                }
+            }
+        }
+
+        function showResultScreen() {
+
+            AudioManager.stopMusicByName('gameplay');
+            resultScreen.classList.remove('hidden');
+            
+            const popup = document.getElementById('result-popup');
+            const resultImg = document.getElementById('result-image');
+            const resultStatus = document.getElementById('result-status');
+            const resultScore = document.getElementById('result-score');
+
+            popup.classList.remove('active'); 
+            void popup.offsetWidth;
+            popup.classList.add('active');
+
+            if (score >= 100){
+                resultImg.src = result3Star.src;
+                AudioManager.playSFX('sfxwin');
+
+                const sfx = document.getElementById('bgm-sfxwin');
+                sfx.addEventListener('ended', function onEnd() {
+                    AudioManager.playMusic('bgwin');
+                    sfx.removeEventListener('ended', onEnd);
+                });
+            }
+            else if (score >= 80) {
+                resultImg.src = result2Star.src;
+                AudioManager.playSFX('sfxwin');
+
+                const sfx = document.getElementById('bgm-sfxwin');
+                sfx.addEventListener('ended', function onEnd() {
+                    AudioManager.playMusic('bgwin');
+                    sfx.removeEventListener('ended', onEnd);
+                });
+            }
+            else if (score >= 60) {
+                resultImg.src = result1Star.src;
+                AudioManager.playSFX('sfxwin');
+
+                const sfx = document.getElementById('bgm-sfxwin');
+                sfx.addEventListener('ended', function onEnd() {
+                    AudioManager.playMusic('bgwin');
+                    sfx.removeEventListener('ended', onEnd);
+                });
+            }
+            else {
+                resultImg.src = result0Star.src;
+                AudioManager.playMusic('bglose');
+            }
+
+            if (score >= 60) {
+                resultStatus.textContent = "Kerja Bagus !";
+                resultStatus.style.color = "#ECC811";
+            } else {
+                resultStatus.textContent = "Coba Lagi !";
+                resultStatus.style.color = "#ECC811";
+            }
+
+            // Skor
+            resultScore.textContent = score;
+
+            if (score >= 60) {
+                nextLevelBtn.classList.remove("hidden");
+            } else {
+                nextLevelBtn.classList.add("hidden");
+            }
+        }
+
+        // --- Fungsi-fungsi Gambar ---
+        function drawPlank(ctx, p) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle);
+            // DIUBAH: Menggunakan halfWidth dan halfHeight yang sudah dihitung sebelumnya
+            ctx.drawImage(plankImage, -p.halfWidth, -p.halfHeight, p.width, p.height);
+            ctx.restore();
+        }
+        function drawBall(ctx, b) {
+            if (!b.isActive) return;
+            ctx.save();
+            ctx.drawImage(ballImage, b.x - b.radius, b.y - b.radius, b.radius * 2, b.radius * 2);
+            ctx.restore();
+        }
+        function drawBasket(ctx, bsk) {
+            ctx.drawImage(basketImage, bsk.x - bsk.width / 2, bsk.y - bsk.height / 2, bsk.width, bsk.height);
+        }
+
+        function updateAndDrawDispenser(ctx, w, h) {
+            if (!dispenser) return;
+
+            switch (dispenser.state) {
+                case 'IDLE':
+                    if (Date.now() - dispenser.idleMoveTimer > dispenser.idleMoveCooldown) {
+                        dispenser.targetX = Math.random() * (w * 0.8) + (w * 0.1);
+                        dispenser.state = 'IDLE_MOVING';
+                        dispenser.idleMoveTimer = Date.now();
+                    }
+                    break;
+
+                case 'IDLE_MOVING':
+                case 'MOVING_TO_SPAWN':
+                    if (Math.abs(dispenser.x - dispenser.targetX) > dispenser.speed) {
+                        if (dispenser.x < dispenser.targetX) dispenser.x += dispenser.speed;
+                        else dispenser.x -= dispenser.speed;
+                    } else {
+                        dispenser.x = dispenser.targetX;
+                        if (dispenser.state === 'MOVING_TO_SPAWN') {
+                            dispenser.state = 'DISPENSING';
+                            dispenser.currentFrame = 0;
+                        } else {
+                            dispenser.state = 'IDLE';
+                        }
+                    }
+                    break;
+
+                case 'DISPENSING':
+                    if (Date.now() - dispenser.lastFrameTime > dispenser.animationSpeed) {
+                        dispenser.currentFrame++;
+                        dispenser.lastFrameTime = Date.now();
+                    }
+                    if (dispenser.currentFrame >= dispenser.frameCount) {
+                        resetBall();
+                        dispenser.state = 'IDLE';
+                        dispenser.currentFrame = 0;
+                    }
+                    break;
+            }
+            
+            const sourceX = dispenser.currentFrame * dispenser.frameWidth;
+            const displayWidth = dispenser.frameWidth; 
+            const displayHeight = dispenser.frameHeight;
+
+            ctx.drawImage(
+                dispenser.image,
+                sourceX, 0,
+                dispenser.frameWidth, dispenser.frameHeight,
+                dispenser.x - (displayWidth / 2),
+                dispenser.y - (displayHeight / 2),
+                displayWidth, displayHeight
+            );
+        }
+        
+        function drawHiasan(ctx) {
+            if (!hiasanAnimasi) return;
+            hiasanAnimasi.currentFrame = hiasanSequenceIndex;
+            const sourceX = hiasanAnimasi.currentFrame * hiasanAnimasi.frameWidth;
+
+            ctx.drawImage(
+                hiasanAnimasi.image,
+                sourceX, 0,
+                hiasanAnimasi.frameWidth, hiasanAnimasi.frameHeight,
+                hiasanAnimasi.x, hiasanAnimasi.y,
+                hiasanAnimasi.width, hiasanAnimasi.height
+            );
+        }
+
+        // --- Logika Game ---
+        function updatePhysicsAndCollision() {
+            if (!ball || !plank || !ball.isActive) return;
+
+            ball.vy += physicsConstants.gravity;
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            const dx = ball.x - plank.x;
+            const dy = ball.y - plank.y;
+            const rotatedX = dx * Math.cos(-plank.angle) - dy * Math.sin(-plank.angle);
+            const rotatedY = dx * Math.sin(-plank.angle) + dy * Math.cos(-plank.angle);
+            
+            // DIUBAH: Menggunakan halfWidth dan halfHeight yang sudah dihitung
+            const closestX = Math.max(-plank.halfWidth, Math.min(plank.halfWidth, rotatedX));
+            const closestY = Math.max(-plank.halfHeight, Math.min(plank.halfHeight, rotatedY));
+            
+            // DIUBAH: Math.pow(x, 2) diganti dengan x * x untuk sedikit optimasi
+            const distance = Math.sqrt((rotatedX - closestX)**2 + (rotatedY - closestY)**2);
+
+            if (distance < ball.radius) {
+                const penetration = ball.radius - distance;
+                const collisionVectorX = rotatedX - closestX;
+                const collisionVectorY = rotatedY - closestY;
+                const vectorLength = Math.sqrt(collisionVectorX**2 + collisionVectorY**2);
+                
+                let normalLocalX = collisionVectorX / vectorLength;
+                let normalLocalY = collisionVectorY / vectorLength;
+                
+                if (isNaN(normalLocalX) || isNaN(normalLocalY)) {
+                    normalLocalX = 0; normalLocalY = -1;
+                }
+                
+                const normalWorldX = normalLocalX * Math.cos(plank.angle) - normalLocalY * Math.sin(plank.angle);
+                const normalWorldY = normalLocalX * Math.sin(plank.angle) + normalLocalY * Math.cos(plank.angle);
+                
+                ball.x += normalWorldX * penetration;
+                ball.y += normalWorldY * penetration;
+                
+                const dotProduct = ball.vx * normalWorldX + ball.vy * normalWorldY;
+                const newVx = ball.vx - 2 * dotProduct * normalWorldX;
+                const newVy = ball.vy - 2 * dotProduct * normalWorldY;
+                
+                ball.vx = newVx * physicsConstants.friction;
+                ball.vy = newVy * physicsConstants.bounce;
+            }
+        }
+        
+        function resetBall() {
+            if (!ball || !dispenser) return;
+            ball.y = dispenser.y + (dispenser.frameHeight / 2) + ball.radius;
+            ball.x = dispenser.x;
+            ball.vx = 0;
+            ball.vy = 0;
+            ball.isActive = true;
+        }
+
+        // --- GAME LOOP UTAMA ---
+        function onResults(results) {
+            if (!gameStarted && videoElement.readyState >= 3) { // DIUBAH: Cek video sudah siap
+                canvasElement.width = window.innerWidth;
+                canvasElement.height = window.innerHeight;
+                loadingContainer.classList.add('hidden');
+                gameWrapper.classList.remove('hidden');
+            }
+            if (!gameStarted) return;
+
+            const w = canvasElement.width;
+            const h = canvasElement.height;
+            
+            if (plank && plank.x === null) {
+                plank.x = w / 2;
+                plank.y = h / 2;
+                basket.x = w - basket.width / 2 - 40;
+                basket.y = h - basket.height / 2 - 40;
+                dispenser.x = w / 2;
+                resetBall();
+            }
+
+            if (!gameOver) {
+                const maxAngle = 0.8;
+                const angleSensitivity = 0.005;
+                const positionSmoothing = 0.2;
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
+                    const wrist1 = results.multiHandLandmarks[0][0];
+                    const wrist2 = results.multiHandLandmarks[1][0];
+                    const midX = (((1 - wrist1.x) + (1 - wrist2.x)) / 2) * w; 
+                    const midY = ((wrist1.y + wrist2.y) / 2) * h;
+                    plank.x += (midX - plank.x) * positionSmoothing;
+                    plank.y += (midY - plank.y) * positionSmoothing;
+                    let leftHandY = (wrist1.x > wrist2.x) ? wrist1.y : wrist2.y;
+                    let rightHandY = (wrist1.x < wrist2.x) ? wrist1.y : wrist2.y;
+                    let yDiff = (rightHandY - leftHandY) * h;
+                    let targetAngle = yDiff * angleSensitivity;
+                    plank.angle = Math.max(-maxAngle, Math.min(maxAngle, targetAngle));
+                } else if (results.multiHandLandmarks && results.multiHandLandmarks.length === 1) {
+                    const wrist = results.multiHandLandmarks[0][0];
+                    const targetX = wrist.x * w;
+                    const targetY = wrist.y * h;
+                    plank.x += (targetX - plank.x) * positionSmoothing;
+                    plank.y += (targetY - plank.y) * positionSmoothing;
+                    plank.angle = 0;
+                }
+
+                updatePhysicsAndCollision();
+                
+                const basketHitbox = {
+                    left: basket.x - basket.width / 2, right: basket.x + basket.width / 2,
+                    top: basket.y - basket.height / 2, bottom: basket.y + basket.height / 2
+                };
+                if (ball.isActive && ball.x > basketHitbox.left && ball.x < basketHitbox.right && ball.y > basketHitbox.top && ball.y < basketHitbox.bottom) {
+                    score += 10;
+                    ball.isActive = false;
+                    dispenser.state = 'MOVING_TO_SPAWN';
+                    dispenser.targetX = Math.random() * (w * 0.8) + (w * 0.1);
+                    hiasanSequenceIndex = (hiasanSequenceIndex + 1) % hiasanAnimasi.frameCount; 
+                }
+
+                if (ball.isActive && ball.y - ball.radius > h) {
+                    gameOver = true;
+                }
+            }
+            
+            // --- Bagian Menggambar ---
+            canvasCtx.clearRect(0, 0, w, h);
+            
+            // DIUBAH: Hapus baris di bawah ini! Ini adalah penyebab utama lag.
+            // canvasCtx.drawImage(results.image, 0, 0, w, h);
+            // Latar belakang video sudah ditampilkan oleh elemen <video> itu sendiri.
+            
+            canvasCtx.drawImage(machineryImage, 0, 0, w, 150);
+            drawPlank(canvasCtx, plank);
+            drawBasket(canvasCtx, basket);
+            drawBall(canvasCtx, ball);
+            updateAndDrawDispenser(canvasCtx, w, h);
+            drawHiasan(canvasCtx);
+
+            // UI
+            canvasCtx.fillStyle = '#FFFFFF';
+            canvasCtx.font = 'bold 48px "Luckiest Guy", sans-serif';
+            canvasCtx.textAlign = 'center';
+            canvasCtx.strokeStyle = 'black';
+            canvasCtx.lineWidth = 5;
+            canvasCtx.strokeText(`SKOR: ${score}`, w / 2, 80);
+            canvasCtx.fillText(`SKOR: ${score}`, w / 2, 80);
+            
+            if ((gameOver) && !resultScreen.classList.contains('hidden') === false) {
+                showResultScreen();
+            }
+        }
+
+        function startGame() {
+            score = 0;
+            gameOver = false;
+            gameStarted = false;
+
+            AudioManager.playMusic('gameplay');
+            pauseBtn.classList.remove('hidden');
+
+            // DIUBAH: Tambahkan halfWidth dan halfHeight untuk efisiensi
+            plank = { x: null, y: null, width: 760, height: 80, angle: 0, halfWidth: 380, halfHeight: 40 };
+            ball = { x: null, y: 50, radius: 40, vx: 0, vy: 0, isActive: false };
+            basket = { x: null, y: null, width: 265, height: 260 };
+            
+            dispenser = {
+                x: null, y: 120, targetX: null, speed: 10,
+                image: dispenserImage,
+                currentFrame: 0, frameCount: 3,
+                frameWidth: 435, frameHeight: 272,
+                animationSpeed: 150, lastFrameTime: 0,
+                state: 'IDLE',
+                idleMoveTimer: Date.now(),
+                idleMoveCooldown: 3000
+            };
+
+            hiasanAnimasi = {
+                image: hiasanPojokImage,
+                x: 0, y: 0, width: 201, height: 640,
+                frameWidth: 204, frameHeight: 640, frameCount: 6,
+                currentFrame: 0
+            };
+            
+            hiasanSequenceIndex = 0;
+
+            physicsConstants = { gravity: 0.25, friction: 0.99, bounce: 0.7 };
+            
+            loadingContainer.classList.remove('hidden');
+            gameWrapper.classList.add('hidden');
+            
+            if (!hands) {
+                hands = new window.Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+                hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 0,
+                    minDetectionConfidence: 0.6,
+                    minTrackingConfidence: 0.6
+                });
+                hands.onResults(onResults);
+            }
+
+            if (!camera) {
+                camera = new window.Camera(videoElement, {
+                    onFrame: async () => await hands.send({ image: videoElement }),
+                    // DIUBAH: Turunkan resolusi kamera secara signifikan
+                    width: 640, height: 360,
+                });
+            }
+            camera.start().catch(err => {
+                loadingText.innerText = 'Gagal mengakses kamera. Pastikan diizinkan.';
+                console.error("Camera Error:", err);
+            });
+        }
+
+        function stopGame() {
+            AudioManager.stopMusic();
+            if (camera) { camera.stop(); }
+        }
+
+        // ==========================================
+        // INITIALIZATION - Load progress saat start
+        // ==========================================
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!menuScreen.classList.contains('hidden')) {
+                AudioManager.playMusic('mainmenu');
+            }
+        });
+        populatePlayers();
+    </script>
+</body>
+</html>
