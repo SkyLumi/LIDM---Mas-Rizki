@@ -1,9 +1,9 @@
 import MediaPipeManager from "./mediapipeManager.js";
 
-export class Game extends Phaser.Scene {
+export class BaseGameScene extends Phaser.Scene {
     
-    constructor() {
-        super('Game');
+    constructor(key) {
+        super(key);
         
         this.targetConePos = { x: 0, y: 0 };
         this.smoothingFactor = 0.3;
@@ -29,7 +29,7 @@ export class Game extends Phaser.Scene {
         this.videoElement = document.getElementById('webcam')
         this.mediapipe = new MediaPipeManager(this.videoElement, this.onMediaPipeResults.bind(this));
 
-        this.gameTimeRemaining = 80;
+        // this.gameTimeRemaining = 80;
         this.score = 0;
         this.maxLives = 3;
         this.currentLives = this.maxLives;
@@ -123,20 +123,6 @@ export class Game extends Phaser.Scene {
             fill: '#ffffff' 
         })
 
-        this.gameTimer = this.time.addEvent({
-            delay: 1000,
-            callback: this.updateTimer,
-            callbackScope: this,
-            loop: true
-        });
-
-        this.spawnTimer = this.time.addEvent({
-            delay: 2500,
-            callback: this.jatuhinEsKrim,
-            callbackScope: this,
-            loop: true
-        });
-
         pauseButton.on('pointerover', () => {
             this.tweens.add({
                 targets: pauseButton,
@@ -156,8 +142,8 @@ export class Game extends Phaser.Scene {
         });
 
         pauseButton.on('pointerdown', () => {
-            this.scene.pause('Game'); 
-            this.scene.launch('Pause');
+            this.scene.pause(this.scene.key); 
+            this.scene.launch('Pause', { gameSceneKey: this.scene.key });
         });
 
         // 5. Setup Audio
@@ -179,10 +165,6 @@ export class Game extends Phaser.Scene {
             if (cream.y > this.sys.game.config.height + 100) {
                 this.loseLife(); 
                 cream.destroy();
-                
-                if (this.currentLives <= 0) {
-                    this.endGame(false)
-                }
             }
         });
     }
@@ -210,9 +192,10 @@ export class Game extends Phaser.Scene {
     }
     
     endGame() {
+        if (this.gameOver) return
         this.gameOver = true
-        this.scene.pause()
-        this.scene.launch('Result', { score: this.score })
+        this.scene.pause(this.scene.key)
+        this.scene.launch('Result', { score: this.score, gameSceneKey: this.scene})
     }
     
     onMediaPipeResults(results) {
@@ -235,11 +218,11 @@ export class Game extends Phaser.Scene {
         if (this.currentLives > 0) {
             this.currentLives--;
             const lostIcon = this.lifeIcons[this.currentLives];
-            lostIcon.setVisible(false);
+            lostIcon.setVisible(false)
         }
 
         if (this.currentLives === 0) {
-            console.log('GAME OVER!');
+            this.endGame()
         }
     }
 
@@ -282,7 +265,7 @@ export class Game extends Phaser.Scene {
 
         if (this.gameTimeRemaining <= 0) {
             this.gameTimer.remove(); 
-            this.endGame(false); 
+            this.endGame(); 
         }
     }
 

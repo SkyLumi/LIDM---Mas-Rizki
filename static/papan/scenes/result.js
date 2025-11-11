@@ -2,29 +2,18 @@ export class Result extends Phaser.Scene {
     constructor() {
         super('Result')
 
-        this.levelMap = {
-            'Level1': 'Level2',
-            'Level2': 'Level3',
-            'Level3': 'MainMenu'
-        };
+        // this.levelMap = {
+        //     'Level1': 'Level2',
+        //     'Level2': 'Level3',
+        //     'Level3': 'MainMenu'
+        // };
 
-        this.levelMapPanel = {
-            'Level1': 'Level 01',
-            'Level2': 'Level 02',
-            'Level3': 'level 03'
-        };
-
-
-        this.finalScore = 0
-        this.analyticsReport = null
+        this.finalScore = 0;
     }
 
     init(data) {
-        this.finalScore = data.score
-        this.scoop = data.scoop
-        this.gameSceneKey = data.gameSceneKey
-        this.analyticsReport = data.report
-        this.win = data.win
+        this.finalScore = data.score;
+        // this.gameSceneKey = data.gameSceneKey;
     }
 
     create() {
@@ -33,55 +22,31 @@ export class Result extends Phaser.Scene {
         let screenCenterX = width / 2
         let screenCenterY = height / 2
 
-        if (!this.win) {
-            this.finalScore = 0
-            this.scoop = 0
-            this.analyticsReport = null
-        }
-
-        //              Analytics               //
-        if (this.analyticsReport) {
-            this.sendAnalyticsToAPI(this.analyticsReport);
-        }
-        //              ---------               //
-
         this.add.rectangle(screenCenterX, screenCenterY, width, height, 0x000000, 0.5)
             .setInteractive()
             .on('pointerdown', () => {});
 
         this.add.image(screenCenterX, 0, 'gameOverPanel')
             .setOrigin(0.5, 0)
-            .setScale(0.95)
+            .setScale(1.4)
 
-        let bintangContainer = this.add.container(screenCenterX, 235)
+        let bintangContainer = this.add.container(screenCenterX, 230)
 
         const bintang1 = this.add.image(-110, 10, 'bintang')
-            .setScale(0.9)
+            .setScale(0.8)
 
         const bintang2 = this.add.image(0, 0, 'bintang')
-            .setScale(1)
+            .setScale(0.9)
 
         const bintang3 = this.add.image(110, 10, 'bintang')
-            .setScale(0.9)
+            .setScale(0.8)
 
         bintangContainer.add([bintang1, bintang2, bintang3])
 
-        let labelJudul = this.add.text(screenCenterX, 500, 'KERJA BAGUS!', {
+        this.add.text(screenCenterX, 500, 'KERJA BAGUS!', {
             fontFamily: 'lilita-one',
             fontSize: '72px',
             fill: '#ffffff'
-        }).setOrigin(0.5)
-
-        if (!this.win) {
-            labelJudul.setText('COBA LAGI')
-            bintangContainer.setVisible(false)
-        }
-
-        this.add.text(screenCenterX, 390, this.levelMapPanel[this.gameSceneKey], {
-            fontFamily: 'raleway',
-            fontSize: '46px',
-            fill: '#ffffff',
-            fontStyle: 'bold'
         }).setOrigin(0.5)
 
         let scoreTextContainer = this.add.container(screenCenterX - 230, 560)
@@ -119,7 +84,7 @@ export class Result extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(1, 0)
 
-        scoopNumber.setText(this.scoop)
+        scoopNumber.setText(this.finalScore / 10)
         scoopTextContainer.add([scoopText, scoopNumber])
 
         let panelContainer = this.add.container(screenCenterX, screenCenterY + 250)
@@ -130,7 +95,7 @@ export class Result extends Phaser.Scene {
 
         menuButton.on('pointerdown', () => {
             this.scene.stop()
-            this.scene.stop(this.gameSceneKey )
+            // this.scene.stop(this.gameSceneKey )
             this.scene.start('MainMenu')
         });
 
@@ -139,10 +104,8 @@ export class Result extends Phaser.Scene {
             .setScale(3)
 
         nextLevelButton.on('pointerdown', () => {
-            const nextLevel = this.levelMap[this.gameSceneKey]
-            this.scene.stop()
-            this.scene.stop(this.gameSceneKey )
-            this.scene.start(nextLevel)
+            // let nextLevel = this.levelMap[this.gameSceneKey]
+            // this.scene.start(nextLevel)
         });
 
         const restartButton = this.add.image(0, 0, 'panelRestart')
@@ -151,36 +114,10 @@ export class Result extends Phaser.Scene {
 
         restartButton.on('pointerdown', () => {
             this.scene.stop()
-            this.scene.stop(this.gameSceneKey)
-            this.scene.start(this.gameSceneKey)
+            // this.scene.stop(this.gameSceneKey )
+            // this.scene.start(this.gameSceneKey )
         });
 
         panelContainer.add([menuButton,restartButton,nextLevelButton])
-    }
-
-    async sendAnalyticsToAPI(data) {
-        const apiEndpoint = 'http://127.0.0.1:5000/analytics/save'; 
-
-        console.log('Mengirim data ke API:', data);
-
-        try {
-            const response = await fetch(apiEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`);
-            }
-
-            const result = await response.json();
-            console.log('API Sukses:', result);
-
-        } catch (error) {
-            console.error('API Gagal Nembak:', error);
-        }
     }
 }
