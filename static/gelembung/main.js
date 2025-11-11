@@ -1,8 +1,8 @@
 import { Game } from "./scenes/game.js"
-import { levelMenu } from "./scenes/levelMenu.js"
+import { LevelMenu } from "./scenes/levelMenu.js"
 import { MainMenu } from "./scenes/mainMenu.js"
 import { Preloader } from "./scenes/preloader.js"
-
+import { Result } from "./scenes/result.js"
 
 const config = {
    type: Phaser.AUTO,
@@ -11,20 +11,21 @@ const config = {
    parent: 'game-container',
    width: 1920,
    height: 1080,
-   transparant: true,
+   transparent: true,
    backgroundColor: '#000000',
    pixelArt: false,
    physics: {
       default: 'arcade',
       arcade: {
-         grafity: {y: 0},
+         gravity: { y: 0 },
       }
    },
    scene: [
       Preloader,
       MainMenu,
-      levelMenu,
-      Game
+      LevelMenu,
+      Game,
+      Result
    ],
    scale: {
       mode: Phaser.Scale.FIT,

@@ -6,11 +6,30 @@ export class Preloader extends Phaser.Scene {
    preload() {
       const basePathImg = 'static/assets/gelembung_img'
       const basePathFont = 'static/assets/font'
+      const basePathAudio = 'static/assets/audio'
+
+      //    AUDIO    //
+      this.load.audio('bgMainMenu', `${basePathAudio}/gelembung-mainmenu.m4a`)
+      this.load.audio('bgLose', `${basePathAudio}/gelembung-bglose.m4a`)
+      this.load.audio('bgWin', `${basePathAudio}/gelembung-bgwin.m4a`)
+      this.load.audio('bgGameplay', `${basePathAudio}/gelembung-gameplay.m4a`)
+
+      this.load.audio('sfxBubblePop', `${basePathAudio}/gelembung-popup.mp3`)
+      this.load.audio('sfxBomPop', `${basePathAudio}/gelembung-pop-explode.m4a`)
+      this.load.audio('sfxStartGame', `${basePathAudio}/gelembung-startgame.m4a`)
+      this.load.audio('sfxPlayButton', `${basePathAudio}/gelembung-playbutton.m4a`)
+      this.load.audio('sfxCloseButton', `${basePathAudio}/gelembung-close-click.m4a`)
+      this.load.audio('sfxMenuButtonClick', `${basePathAudio}/gelembung-sfxmenubtn-click.m4a`)
+      this.load.audio('sfxMenuButtonHover', `${basePathAudio}/gelembung-sfxmenubtn-hover.m4a`)
+      this.load.audio('sfxLevelButtonClick', `${basePathAudio}/gelembung-level-click.m4a`)
+      this.load.audio('sfxLevelButtonHover', `${basePathAudio}/gelembung-level-hover.m4a`)
+      this.load.audio('sfxWin', `${basePathAudio}/gelembung-sfxwin.m4a`)
 
       //    FONT     //
       this.load.font('AlfaSlabOne', `${basePathFont}/AlfaSlabOne-Regular.ttf`)
       this.load.font('LilitaOne', `${basePathFont}/LilitaOne-Regular.ttf`)
       this.load.font('Raleway', `${basePathFont}/Raleway-Regular.ttf`)
+      this.load.font('RalewayBold', `${basePathFont}/Raleway-Bold.ttf`)
 
       //    BACKGROUND     //
       this.load.image('mainmenu', `${basePathImg}/bg-mainmenu.png`)
@@ -49,7 +68,6 @@ export class Preloader extends Phaser.Scene {
       this.load.image('levelLock', `${basePathImg}/levellock.png`)
 
       //    RESULT SCREEN     //
-      this.load.image('gameOver', `${basePathImg}/gameover.png`)
       this.load.image('result0Star', `${basePathImg}/result-0-star.png`)
       this.load.image('result1Star', `${basePathImg}/result-1-star.png`)
       this.load.image('result2Star', `${basePathImg}/result-2-star.png`)
@@ -82,17 +100,44 @@ export class Preloader extends Phaser.Scene {
       this.load.image('air', `${basePathImg}/air.png`)
 
       //    LEVEL TUTORIAL SCREEN     //
-      this.load.image('tutorialLv1', `${basePathImg}/tutoriallv1.png`)
-      this.load.image('tutorialLv2', `${basePathImg}/tutoriallv2.png`)
-      this.load.image('tutorialLv3', `${basePathImg}/tutoriallv3.png`)
+      this.load.image('tutoriallv1', `${basePathImg}/tutoriallv1.png`)
+      this.load.image('tutoriallv2', `${basePathImg}/tutoriallv2.png`)
+      this.load.image('tutoriallv3', `${basePathImg}/tutoriallv3.png`)
 
       //    COOLDOWN TIMER     //
-      this.load.image('One', `${basePathImg}/One.png`)
-      this.load.image('Two', `${basePathImg}/Two.png`)
-      this.load.image('Three', `${basePathImg}/Three.png`)
+      this.load.image('one', `${basePathImg}/One.png`)
+      this.load.image('two', `${basePathImg}/Two.png`)
+      this.load.image('three', `${basePathImg}/Three.png`)
    }
 
    create() {
+      //    Animasi     //
+      this.anims.create({
+         key: 'airEffectPlay',
+         frames: this.anims.generateFrameNumbers('efekAirAnimasi', { start: 0, end: 6}),
+         frameRate: 10,
+         repeat: -1
+      })
+      this.anims.create({
+         key: 'blueBubblePop',
+         frames: this.anims.generateFrameNumbers('blueBubble', {start: 0, end: 5}),
+         frameRate: 10,
+         repeat: 0
+      })
+      this.anims.create({
+         key: 'purpleBubblePop',
+         frames: this.anims.generateFrameNumbers('purpleBubble', {start: 0, end: 5}),
+         frameRate: 10,
+         repeat: 0
+      })
+
+      this.anims.create({
+         key: 'bomBubblePop',
+         frames: this.anims.generateFrameNumbers('bomBubble', {start: 0, end: 5}),
+         frameRate: 10,
+         repeat: 0
+      })
+      
       this.scene.start('MainMenu')
    }
 }

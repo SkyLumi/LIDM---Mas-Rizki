@@ -1,4 +1,4 @@
-export class levelMenu extends Phaser.Scene {
+export class LevelMenu extends Phaser.Scene {
    constructor(){
       super('LevelMenu')
    }
@@ -55,6 +55,11 @@ export class levelMenu extends Phaser.Scene {
             duration: tweenDuration,
             ease: 'Power1'
          })
+
+         if (this.registry.get('isSfxOn') === true) {
+            this.sound.play('sfxMenuButtonHover')
+         }
+
       })
 
       closeButton.on('pointerout', () => {
@@ -67,6 +72,9 @@ export class levelMenu extends Phaser.Scene {
       })
 
       level1Btn.on('pointerover', () => {
+         if (this.registry.get('isSfxOn') === true) {
+            this.sound.play('sfxLevelButtonHover')
+         }
          level1Btn.setTexture('level1Selected');
       });
 
@@ -75,6 +83,9 @@ export class levelMenu extends Phaser.Scene {
       });
 
       level2Btn.on('pointerover', () => {
+         if (this.registry.get('isSfxOn') === true) {
+            this.sound.play('sfxLevelButtonHover')
+         }
          level2Btn.setTexture('level2Selected');
       });
 
@@ -83,6 +94,9 @@ export class levelMenu extends Phaser.Scene {
       });
 
       level3Btn.on('pointerover', () => {
+         if (this.registry.get('isSfxOn') === true) {
+            this.sound.play('sfxLevelButtonHover')
+         }
          level3Btn.setTexture('level3Selected');
       });
 
@@ -91,23 +105,33 @@ export class levelMenu extends Phaser.Scene {
       });
 
       closeButton.on('pointerdown', () => {
+         if (this.registry.get('isSfxOn') === true) {
+            this.sound.play('sfxMenuButtonClick')
+         }
          this.scene.start('MainMenu')
       });
 
       level1Btn.on('pointerdown', () => {
-         this.scene.start('Game')
+         if (this.isSfxOn) {
+                this.sound.play('sfxLevelButtonClick')
+         }
+         this.selectLevel(1)
       });
       level2Btn.on('pointerdown', () => {
-         alert('Mulai Game 2')
-         // this.selectLevel(2)
+         if (this.isSfxOn) {
+                this.sound.play('sfxLevelButtonClick')
+         }
+         this.selectLevel(2)
       });
       level3Btn.on('pointerdown', () => {
-         alert('Mulai Game 3')
-         // this.selectLevel(3)
+         if (this.isSfxOn) {
+            this.sound.play('sfxLevelButtonClick')
+         }
+         this.selectLevel(3)
       });
    }
 
-   selectLevel(level) {
-      this.scene.start('Game', {level: level})
+   selectLevel(levelNumber) {
+      this.scene.start('Game', {level: levelNumber})
    }
 }
