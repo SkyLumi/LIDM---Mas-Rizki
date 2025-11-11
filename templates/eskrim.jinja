@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <style>
         body { margin: 0; overflow: hidden; background-color: black;}
         #webcam {
@@ -26,11 +27,10 @@
     </style>
 </head>
 <body>
+    <canvas id="snapshotCanvas" style="display: none;"></canvas>
     <div id="game-container">
         <video id="webcam" class="hidden" autoplay playsinline></video>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="static/lib/phaser.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser-plugin-scene-watcher@7.0.0/dist/phaser-plugin-scene-watcher.umd.js"></script>
     <script type="module" src="{{ url_for('static', filename='eskrim/main.js') }}"></script>
