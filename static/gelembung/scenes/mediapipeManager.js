@@ -51,7 +51,6 @@ class MediaPipeManager {
     if (this.camera) {
       this.camera.stop();
     }
-    // MediaPipeManager._instance = null;
   }
 }
 
