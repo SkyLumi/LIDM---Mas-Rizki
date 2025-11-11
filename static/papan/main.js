@@ -6,7 +6,6 @@ import { Pause } from "./scenes/pause.js";
 import { Level1 } from './scenes/level1.js';
 import { Level2 } from './scenes/level2.js';
 import { Level3 } from './scenes/level3.js';
-import { RegisterFace } from "./scenes/registerFace.js";
 
 const config = {
     type: Phaser.AUTO,
@@ -33,7 +32,6 @@ const config = {
         Level3,
         Pause,
         Result,
-        RegisterFace
     ],
     scale: {
         mode: Phaser.Scale.FIT,

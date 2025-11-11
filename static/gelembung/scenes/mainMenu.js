@@ -18,6 +18,10 @@ export class MainMenu extends Phaser.Scene {
             this.registry.set('isSfxOn', true);
         }
 
+        if (this.registry.get('highestLevelUnlocked') === undefined) {
+            this.registry.set('highestLevelUnlocked', 1);
+        }
+
         const bgGameplay = this.registry.get('bgGameplay');
         if (bgGameplay && bgGameplay.isPlaying) {
             bgGameplay.stop();

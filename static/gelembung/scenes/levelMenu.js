@@ -9,11 +9,11 @@ export class LevelMenu extends Phaser.Scene {
       let screenCenterX = width / 2
       let screenCenterY = height / 2
 
-      //    Background     //
+      const highestLevelUnlocked = this.registry.get('highestLevelUnlocked'); 
+
       this.add.image(screenCenterX, screenCenterY, 'levelmenu')
       .setScale(0.75)
 
-      //    Level Box      //
       this.add.image(screenCenterX, screenCenterY, 'levelBox')
       .setScale(0.37)
 
@@ -28,22 +28,35 @@ export class LevelMenu extends Phaser.Scene {
       const buttonContainer = this.add.container(screenCenterX, screenCenterY -60)
 
       const level1Btn = this.add.image(-190, 0, 'level1Unselected')
-      .setScale(0.4)
-      .setInteractive()
-      const level2Btn = this.add.image(0, 0, 'level2Unselected')
-      .setScale(0.4)
-      .setInteractive()
-      const level3Btn = this.add.image(190, 0, 'level3Unselected')
-      .setScale(0.4)
-      .setInteractive()
+         .setScale(0.4)
+         .setInteractive();
+      this.addLevelButtonEvents(level1Btn, 1, 'level1Unselected', 'level1Selected');
 
+
+      let level2Texture = (highestLevelUnlocked >= 2) ? 'level2Unselected' : 'level2Locked';
+      const level2Btn = this.add.image(0, 0, level2Texture)
+         .setScale(0.4);
+      
+      if (highestLevelUnlocked >= 2) {
+         level2Btn.setInteractive();
+         this.addLevelButtonEvents(level2Btn, 2, 'level2Unselected', 'level2Selected');
+      }
+
+      let level3Texture = (highestLevelUnlocked >= 3) ? 'level3Unselected' : 'level3Locked';
+      const level3Btn = this.add.image(190, 0, level3Texture)
+         .setScale(0.4);
+
+      if (highestLevelUnlocked >= 3) {
+         level3Btn.setInteractive();
+         this.addLevelButtonEvents(level3Btn, 3, 'level3Unselected', 'level3Selected');
+      }
+      
       buttonContainer.add([
          level1Btn, 
          level2Btn,
          level3Btn
       ])
 
-      //    Hover Button Interaction      //
       const normalScale = 0.35
       const hoverScale = 0.4
       const tweenDuration = 100;
@@ -55,11 +68,9 @@ export class LevelMenu extends Phaser.Scene {
             duration: tweenDuration,
             ease: 'Power1'
          })
-
          if (this.registry.get('isSfxOn') === true) {
             this.sound.play('sfxMenuButtonHover')
          }
-
       })
 
       closeButton.on('pointerout', () => {
@@ -71,63 +82,33 @@ export class LevelMenu extends Phaser.Scene {
          })
       })
 
-      level1Btn.on('pointerover', () => {
-         if (this.registry.get('isSfxOn') === true) {
-            this.sound.play('sfxLevelButtonHover')
-         }
-         level1Btn.setTexture('level1Selected');
-      });
-
-      level1Btn.on('pointerout', () => {
-         level1Btn.setTexture('level1Unselected');
-      });
-
-      level2Btn.on('pointerover', () => {
-         if (this.registry.get('isSfxOn') === true) {
-            this.sound.play('sfxLevelButtonHover')
-         }
-         level2Btn.setTexture('level2Selected');
-      });
-
-      level2Btn.on('pointerout', () => {
-         level2Btn.setTexture('level2Unselected');
-      });
-
-      level3Btn.on('pointerover', () => {
-         if (this.registry.get('isSfxOn') === true) {
-            this.sound.play('sfxLevelButtonHover')
-         }
-         level3Btn.setTexture('level3Selected');
-      });
-
-      level3Btn.on('pointerout', () => {
-         level3Btn.setTexture('level3Unselected');
-      });
-
       closeButton.on('pointerdown', () => {
          if (this.registry.get('isSfxOn') === true) {
             this.sound.play('sfxMenuButtonClick')
          }
          this.scene.start('MainMenu')
       });
+      
+   }
 
-      level1Btn.on('pointerdown', () => {
-         if (this.isSfxOn) {
-                this.sound.play('sfxLevelButtonClick')
+   addLevelButtonEvents(button, levelNumber, unselectedTexture, selectedTexture) {
+      
+      button.on('pointerover', () => {
+         if (this.registry.get('isSfxOn') === true) {
+            this.sound.play('sfxLevelButtonHover');
          }
-         this.selectLevel(1)
+         button.setTexture(selectedTexture);
       });
-      level2Btn.on('pointerdown', () => {
-         if (this.isSfxOn) {
-                this.sound.play('sfxLevelButtonClick')
-         }
-         this.selectLevel(2)
+
+      button.on('pointerout', () => {
+         button.setTexture(unselectedTexture);
       });
-      level3Btn.on('pointerdown', () => {
-         if (this.isSfxOn) {
-            this.sound.play('sfxLevelButtonClick')
+
+      button.on('pointerdown', () => {
+         if (this.registry.get('isSfxOn') === true) {
+            this.sound.play('sfxLevelButtonClick');
          }
-         this.selectLevel(3)
+         this.selectLevel(levelNumber);
       });
    }
 

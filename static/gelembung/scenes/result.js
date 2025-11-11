@@ -67,6 +67,13 @@ export class Result extends Phaser.Scene {
             starCount = 1;
          }
          panelKey = `result${starCount}Star`; 
+
+         const newLevelUnlocked = this.selectedLevel + 1;
+
+         if (newLevelUnlocked > currentHighest && newLevelUnlocked <= 3) {
+            
+            this.registry.set('highestLevelUnlocked', newLevelUnlocked);
+         }
          
       } else {
          titleText = 'COBA\nLAGI!';

@@ -23,17 +23,10 @@ export class Preloader extends Phaser.Scene {
         this.load.image('closeButton', 'static/assets/eskrim_img/close-btn.png')
         
         // ----             Tutorial               ----
-        this.load.image('tutorial_level1', 'static/assets/eskrim_img/tutorial_level1.png');
-        this.load.image('tutorial_level2', 'static/assets/eskrim_img/tutorial_level2.png');
-        this.load.image('tutorial_level3', 'static/assets/eskrim_img/tutorial_level3.png');
-        this.load.image('mulai_button', 'static/assets/eskrim_img/mulai_button.png')
+        this.load.image('tutorialPanel', 'static/assets/eskrim_img/tutorial.png')
+        this.load.image('playTutorialBtn', 'static/assets/eskrim_img/mulai_button.png')
         
         // ----             Game               ----
-        this.load.image('countdown_3', 'static/assets/eskrim_img/3.png');
-        this.load.image('countdown_2', 'static/assets/eskrim_img/2.png');
-        this.load.image('countdown_1', 'static/assets/eskrim_img/1.png');
-        this.load.image('countdown_go', 'static/assets/eskrim_img/go.png');
-
         this.load.image('boxLife', 'static/assets/eskrim_img/boxLife.png')
         this.load.image('cone', 'static/assets/eskrim_img/cone.png')
         this.load.image('lifeIcon', 'static/assets/eskrim_img/life-cone-icon.png')
@@ -41,26 +34,8 @@ export class Preloader extends Phaser.Scene {
         this.load.spritesheet('dispenserArm', 'static/assets/eskrim_img/dispenserArm.png', {
             frameWidth: 4784, frameHeight: 1440
         })
-        this.load.spritesheet('arm_tilt_right', 'static/assets/eskrim_img/arm_tilt_right.png', {
-            frameWidth: 4784, frameHeight: 1440
-        })
-        this.load.spritesheet('arm_tilt_left', 'static/assets/eskrim_img/arm_tilt_left.png', {
-            frameWidth: 4784, frameHeight: 1440
-        })
-        this.load.spritesheet('drop_left', 'static/assets/eskrim_img/drop_left.png', {
-            frameWidth: 4784, frameHeight: 1440
-        })
-        this.load.spritesheet('drop_right', 'static/assets/eskrim_img/drop_right.png', {
-            frameWidth: 4784, frameHeight: 1440
-        })
         this.load.spritesheet('iceCreamFall', 'static/assets/eskrim_img/vanillaFall.png', {
             frameWidth: 150, frameHeight: 200
-        })
-        this.load.spritesheet('iceCreamSplat', 'static/assets/eskrim_img/vanillasplat.png', {
-            frameWidth: 288, frameHeight: 288
-        })
-        this.load.spritesheet('bomb', 'static/assets/eskrim_img/bomb.png', {
-            frameWidth: 338, frameHeight: 305
         })
         this.load.image('pauseBtn', 'static/assets/eskrim_img/pause_button.png')
         this.load.image('scorePanel', 'static/assets/eskrim_img/score-panel.png')

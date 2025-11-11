@@ -11,7 +11,6 @@ export class Game extends Phaser.Scene {
       
       this.maxLives = 3
       this.lifeIcons = [] 
-      this.baseSpeed = 1.0
       this.handEffect = {}
 
       this.scoreFillImage = null
@@ -20,16 +19,46 @@ export class Game extends Phaser.Scene {
       this.pauseButton = null
       this.tutorialContainer = null
       this.pauseContainer = null
+
+      this.maxBubbleCount = 1;
+      this.bubbleTypes = ['blue', 'purple'];
+      this.baseSpeed = 1.0;
    }
 
    init(data) {
-      this.maxScore = 2000
-      this.remainingTime = 60
-      this.score = 0
+      this.maxScore = 2000;
+      this.score = 0;
 
       if (data && data.level) {
          this.selectedLevel = data.level
       }
+
+      switch (this.selectedLevel) {
+         case 1:
+            this.remainingTime = 90;
+            this.maxBubbleCount = 1;
+            this.bubbleTypes = ['blue', 'purple'];
+            this.baseSpeed = 1.0;
+            break;
+         case 2:
+            this.remainingTime = 80;
+            this.maxBubbleCount = 2;
+            this.bubbleTypes = ['blue', 'purple', 'bomb'];
+            this.baseSpeed = 1.1;
+            break;
+         case 3:
+            this.remainingTime = 80;
+            this.maxBubbleCount = 3;
+            this.bubbleTypes = ['blue', 'purple', 'bomb', 'blue', 'bomb']; 
+            this.baseSpeed = 1.2;
+            break;
+         default:
+            this.remainingTime = 90;
+            this.maxBubbleCount = 1;
+            this.bubbleTypes = ['blue', 'purple'];
+            this.baseSpeed = 1.0;
+      }
+
       this.starThresholds.one = this.maxScore * 0.6
       this.starThresholds.two = this.maxScore * 0.8
    }
@@ -68,6 +97,13 @@ export class Game extends Phaser.Scene {
          bgGameplay.mute = !isMusicOn;
       }
       
+      this.analytics = {
+         gameStartTime: this.time.now, // Catet waktu mulai
+         totalFrames: 0,   // Total frame game
+         handLossFrames: 0, // Total frame waktu tangan hilang
+         heatmapData: [],   // nampung data heatmap (x, y, t)
+         reactionTimes: []  // (Waktu Reaksi) Buat game Gelembung
+      };
 
       //    Bubble Group      //
       this.bubbleGroup = this.physics.add.group()
@@ -170,10 +206,6 @@ export class Game extends Phaser.Scene {
 
       this.bubbleGroup.getChildren().forEach(bubble => {
 
-         if (bubble.getData('popping')) {
-            return;
-         }
-
          const isOutOfScreen = (
             bubble.x < -150 || 
             bubble.x > this.scale.width + 150 || 
@@ -183,10 +215,14 @@ export class Game extends Phaser.Scene {
 
          if (isOutOfScreen) {
             const type = bubble.getData('type');
-            if (type !== 'bomb') {
-               this.loseLife();
-            }
             
+            if (type !== 'bomb') { 
+               this.score -= 100;
+               this.updateScoreUI();
+               if (this.selectedLevel > 1) {
+                  this.loseLife();
+               }
+            }
             bubble.destroy();
          }
       }); 
@@ -279,7 +315,7 @@ export class Game extends Phaser.Scene {
       const { width, height } = this.sys.game.config;
 
       const countdownImg = this.add.image(width / 2, height / 2, 'three')
-         .setOrigin(0.5)
+         .setOrigin(0.6)
          .setScale(1);
 
       this.time.delayedCall(1000, () => {
@@ -292,6 +328,7 @@ export class Game extends Phaser.Scene {
 
       this.time.delayedCall(3000, () => {
          countdownImg.destroy();
+         this.analytics.gameStartTime = this.time.now;
          this.startGame();
       });
    }
@@ -566,11 +603,37 @@ export class Game extends Phaser.Scene {
          this.tweens.killTweensOf(bubble);
          bubble.body.stop();
       });
-
+      
       this.handEffectGroup.clear(true, true); 
       Object.keys(this.handEffect).forEach(label => {
          delete this.handEffect[label]; 
       });
+
+      const totalPlayTimeMs = this.time.now - this.analytics.gameStartTime;
+
+      const skorFokus = ((this.analytics.totalFrames - this.analytics.handLossFrames) / this.analytics.totalFrames) * 100;
+
+      let avgReactionTimeMs = 0;
+      const reactionTimes = this.analytics.reactionTimes;
+
+      if (reactionTimes.length > 0) {
+         const totalReactionTime = reactionTimes.reduce((acc, time) => acc + time, 0);
+         avgReactionTimeMs = totalReactionTime / reactionTimes.length;
+      }
+
+      const analyticsReport = {
+         userId: "id_anak_abk_123",
+         level: this.scene.key,
+         finalScore: this.score,
+         totalPlayTimeSeconds: totalPlayTimeMs / 1000,
+         metrics: {
+               fokus: skorFokus.toFixed(1),
+               avgReactionTimeSeconds: (avgReactionTimeMs / 1000).toFixed(2),
+               bubblesPopped: reactionTimes.length
+         },
+         rawHeatmap: this.analytics.heatmapData
+      };
+
    }
 
    onMediaPipeResults(results) {
@@ -578,12 +641,17 @@ export class Game extends Phaser.Scene {
          return;
       }
 
+      this.analytics.totalFrames++;
+
       const { width, height } = this.sys.game.config;
 
       const handsDetectedThisFrame = {};
 
       if (results.multiHandLandmarks && results.multiHandedness) {
          
+         const timestamp = this.time.now - this.analytics.gameStartTime;
+
+
          results.multiHandLandmarks.forEach((landmarks, i) => {
             
             const handInfo = results.multiHandedness[i];
@@ -594,6 +662,13 @@ export class Game extends Phaser.Scene {
 
             const palm = landmarks[9];
             if (!palm) return;
+
+            this.analytics.heatmapData.push({ 
+               x: palm.x,
+               y: palm.y,
+               t: timestamp,
+               hand: label
+            });
 
             const x = palm.x * width;
             const y = palm.y * height;
@@ -615,6 +690,9 @@ export class Game extends Phaser.Scene {
                eff.y += (y - eff.y) / 2;
             }
          });
+
+      } else {
+         this.analytics.handLossFrames++;
       }
       
       Object.keys(this.handEffect).forEach(label => {
@@ -637,9 +715,8 @@ export class Game extends Phaser.Scene {
       const dir = Phaser.Utils.Array.GetRandom(directions)
       let x, y, targetX, targetY
 
-      const maxBubbleCount = 2
       const activeCount = this.bubbleGroup.getChildren().length
-      if (activeCount >= maxBubbleCount) return
+      if (activeCount >= this.maxBubbleCount) return
 
       switch (dir) {
          case 'top':
@@ -668,12 +745,17 @@ export class Game extends Phaser.Scene {
             break
       }
 
-      const type = Phaser.Utils.Array.GetRandom(['blue', 'purple'])
-      const key = type == 'blue' ? 'blueBubble' : 'purpleBubble'
+      const type = Phaser.Utils.Array.GetRandom(this.bubbleTypes);
+      let key;
+      if (type === 'blue') key = 'blueBubble';
+      else if (type === 'purple') key = 'purpleBubble';
+      else if (type === 'bomb') key = 'bomBubble';
+
       const bubble = this.physics.add.sprite(x, y, key).setScale(0.2)
       bubble.body.setAllowGravity(false);
       bubble.setData('type', type)
       bubble.setData('popping', false)
+      bubble.setData('spawnTime', this.time.now);
       this.bubbleGroup.add(bubble)
 
       const baseDuration = 15000
@@ -687,12 +769,6 @@ export class Game extends Phaser.Scene {
          ease: 'Linear',
          onComplete: () => {
             if (bubble.active) {
-               const type = bubble.getData('type');
-               
-               if (type !== 'bomb' && !bubble.getData('popping')) {
-                  this.loseLife(); 
-               }
-
                bubble.destroy();
             }
          }
@@ -704,14 +780,30 @@ export class Game extends Phaser.Scene {
          return;
       }
 
+      const popX = bubble.x;
+      const popY = bubble.y;
+
+      if (type !== 'bomb' && !bubble.getData('popping')) {
+         
+         const spawnTime = bubble.getData('spawnTime'); 
+
+         const reactionTimeMs = this.time.now - spawnTime;
+
+         this.analytics.reactionTimes.push(reactionTimeMs);
+
+      }
+
       bubble.setData('popping', true);
 
       bubble.body.setEnable(false);
-
+      let textScorePopUp = '+100'
       const type = bubble.getData('type');
+
       if (type === 'bomb'){ 
          if (this.registry.get('isSfxOn') === true) {
             this.sound.play('sfxBomPop')
+            textScorePopUp = '-100'
+            this.score -= 100;
          }
          bubble.play('bomBubblePop');
          this.loseLife();
@@ -719,10 +811,30 @@ export class Game extends Phaser.Scene {
       else {
          if (this.registry.get('isSfxOn') === true) {
             this.sound.play('sfxBubblePop')
+            textScorePopUp = '+100'
          }
          bubble.play(type == 'blue' ? 'blueBubblePop' : 'purpleBubblePop');
-         this.score += 2000
+         this.score += 100
       }
+
+      let scorePopup = this.add.text(popX, popY, '', {
+            fontFamily: 'lilita-one',
+            fontSize: '48px',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 6
+        }).setOrigin(0.5).setDepth(100);
+
+      this.tweens.add({
+         targets: scorePopup,
+         y: popY - 100,
+         alpha: 0,
+         duration: 800,
+         ease: 'Power1',
+         onComplete: () => {
+               scorePopup.destroy();
+         }
+      });
 
       this.updateScoreUI();
 
