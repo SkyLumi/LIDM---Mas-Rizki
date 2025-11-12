@@ -33,7 +33,7 @@ export class LevelMenu extends Phaser.Scene {
       this.addLevelButtonEvents(level1Btn, 1, 'level1Unselected', 'level1Selected');
 
 
-      let level2Texture = (highestLevelUnlocked >= 2) ? 'level2Unselected' : 'level2Locked';
+      let level2Texture = (highestLevelUnlocked >= 2) ? 'level2Unselected' : 'levelLock';
       const level2Btn = this.add.image(0, 0, level2Texture)
          .setScale(0.4);
       
@@ -42,7 +42,7 @@ export class LevelMenu extends Phaser.Scene {
          this.addLevelButtonEvents(level2Btn, 2, 'level2Unselected', 'level2Selected');
       }
 
-      let level3Texture = (highestLevelUnlocked >= 3) ? 'level3Unselected' : 'level3Locked';
+      let level3Texture = (highestLevelUnlocked >= 3) ? 'level3Unselected' : 'levelLock';
       const level3Btn = this.add.image(190, 0, level3Texture)
          .setScale(0.4);
 

@@ -54,6 +54,7 @@ export class Result extends Phaser.Scene {
       let titleText;
       let buttonsToShow = [];
       let starCount = 0;
+      let currentHighest = this.registry.get('highestLevelUnlocked');
 
       if (this.isWin) {
          titleText = 'KERJA\nBAGUS!';

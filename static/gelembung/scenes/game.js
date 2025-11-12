@@ -10,7 +10,6 @@ export class Game extends Phaser.Scene {
       this.gameState = 'TUTORIAL'
       
       this.maxLives = 3
-      this.lifeIcons = [] 
       this.handEffect = {}
 
       this.scoreFillImage = null
@@ -28,6 +27,8 @@ export class Game extends Phaser.Scene {
    init(data) {
       this.maxScore = 2000;
       this.score = 0;
+      this.lives = 0;
+      this.lifeIcons = [];
 
       if (data && data.level) {
          this.selectedLevel = data.level
@@ -243,22 +244,42 @@ export class Game extends Phaser.Scene {
    }
 
    updateScoreUI() {
-      if (this.score < 0) {
-         this.score = 0;
-      }
+      // if (this.score < 0) this.score = 0;
 
       this.scoreText.setText(this.score.toString().padStart(2, '0'));
 
       if (this.scoreFillImage) {
          
-         let percentage = this.score / this.maxScore
-         percentage = Phaser.Math.Clamp(percentage, 0, 1)
+         const star1_VisualY = 0.5;
+         const star2_VisualY = 0.7;
+         const star3_VisualY = 1.0;
 
-         const originalHeight = this.scoreFillImage.texture.getSourceImage().height
-         const originalWidth = this.scoreFillImage.texture.getSourceImage().width
+         const scorePercent = this.score / this.maxScore;
+         
+         const star1_Score = this.starThresholds.one / this.maxScore;
+         const star2_Score = this.starThresholds.two / this.maxScore;
 
-         const cropHeight = originalHeight * percentage;
+         let visualPercentage = 0;
+         let t = 0;
 
+         if (scorePercent <= star1_Score) {
+            t = scorePercent / star1_Score;
+            visualPercentage = Phaser.Math.Linear(0, star1_VisualY, t);
+         
+         } else if (scorePercent <= star2_Score) {
+            t = (scorePercent - star1_Score) / (star2_Score - star1_Score);
+            visualPercentage = Phaser.Math.Linear(star1_VisualY, star2_VisualY, t);
+         
+         } else {
+            t = (scorePercent - star2_Score) / (1.0 - star2_Score);
+            visualPercentage = Phaser.Math.Linear(star2_VisualY, star3_VisualY, t);
+         }
+         
+         visualPercentage = Phaser.Math.Clamp(visualPercentage, 0, 1);
+         
+         const originalHeight = this.scoreFillImage.texture.getSourceImage().height;
+         const originalWidth = this.scoreFillImage.texture.getSourceImage().width;
+         const cropHeight = originalHeight * visualPercentage;
          const cropY = originalHeight - cropHeight;
 
          this.scoreFillImage.setCrop(
@@ -268,7 +289,7 @@ export class Game extends Phaser.Scene {
             cropHeight   
          );
       }
-
+      
       if (this.score >= this.maxScore && this.gameState === 'PLAYING') {
          this.checkGameEnd();
       }
@@ -579,39 +600,12 @@ export class Game extends Phaser.Scene {
          delete this.handEffect[label]; 
       });
 
-      this.scene.launch('Result', {
-         isWin: isWin,
-         score: this.score,
-         maxScore: this.maxScore,
-         starThresholds: this.starThresholds,
-         selectedLevel: this.selectedLevel
-      });
-   }
-
-   endGame() {
-      this.gameState = 'GAMEOVER'
-
-      if (this.countdownEvent) {
-         this.countdownEvent.remove(false);
-      }
-
-      if (this.bubbleSpawnEvent) {
-         this.bubbleSpawnEvent.remove(false);
-      }
-      
-      this.bubbleGroup.getChildren().forEach(bubble => {
-         this.tweens.killTweensOf(bubble);
-         bubble.body.stop();
-      });
-      
-      this.handEffectGroup.clear(true, true); 
-      Object.keys(this.handEffect).forEach(label => {
-         delete this.handEffect[label]; 
-      });
-
       const totalPlayTimeMs = this.time.now - this.analytics.gameStartTime;
 
-      const skorFokus = ((this.analytics.totalFrames - this.analytics.handLossFrames) / this.analytics.totalFrames) * 100;
+      let skorFokus = 0;
+      if (this.analytics.totalFrames > 0) {
+         skorFokus = ((this.analytics.totalFrames - this.analytics.handLossFrames) / this.analytics.totalFrames) * 100;
+      }
 
       let avgReactionTimeMs = 0;
       const reactionTimes = this.analytics.reactionTimes;
@@ -623,7 +617,7 @@ export class Game extends Phaser.Scene {
 
       const analyticsReport = {
          userId: "id_anak_abk_123",
-         level: this.scene.key,
+         level: this.selectedLevel,
          finalScore: this.score,
          totalPlayTimeSeconds: totalPlayTimeMs / 1000,
          metrics: {
@@ -633,7 +627,16 @@ export class Game extends Phaser.Scene {
          },
          rawHeatmap: this.analytics.heatmapData
       };
+      
+      console.log("LAPORAN ANALITIK:", analyticsReport);
 
+      this.scene.launch('Result', {
+         isWin: isWin,
+         score: this.score,
+         maxScore: this.maxScore,
+         starThresholds: this.starThresholds,
+         selectedLevel: this.selectedLevel
+      });
    }
 
    onMediaPipeResults(results) {
@@ -769,6 +772,11 @@ export class Game extends Phaser.Scene {
          ease: 'Linear',
          onComplete: () => {
             if (bubble.active) {
+               if (type !== 'bomb' && !bubble.getData('popping')) {
+                  if (this.selectedLevel > 1) {
+                     this.loseLife(); 
+                  }
+               }
                bubble.destroy();
             }
          }
@@ -782,6 +790,8 @@ export class Game extends Phaser.Scene {
 
       const popX = bubble.x;
       const popY = bubble.y;
+
+      const type = bubble.getData('type');
 
       if (type !== 'bomb' && !bubble.getData('popping')) {
          
@@ -797,27 +807,26 @@ export class Game extends Phaser.Scene {
 
       bubble.body.setEnable(false);
       let textScorePopUp = '+100'
-      const type = bubble.getData('type');
 
       if (type === 'bomb'){ 
          if (this.registry.get('isSfxOn') === true) {
             this.sound.play('sfxBomPop')
-            textScorePopUp = '-100'
-            this.score -= 100;
          }
+         textScorePopUp = '-100'
+         this.score -= 100;
          bubble.play('bomBubblePop');
          this.loseLife();
       }
       else {
          if (this.registry.get('isSfxOn') === true) {
             this.sound.play('sfxBubblePop')
-            textScorePopUp = '+100'
          }
          bubble.play(type == 'blue' ? 'blueBubblePop' : 'purpleBubblePop');
+         textScorePopUp = '+100'
          this.score += 100
       }
 
-      let scorePopup = this.add.text(popX, popY, '', {
+      let scorePopup = this.add.text(popX, popY, textScorePopUp, {
             fontFamily: 'lilita-one',
             fontSize: '48px',
             fill: '#ffffff',
