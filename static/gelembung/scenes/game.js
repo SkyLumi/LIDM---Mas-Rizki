@@ -244,9 +244,9 @@ export class Game extends Phaser.Scene {
    }
 
    updateScoreUI() {
-      // if (this.score < 0) this.score = 0;
-
-      this.scoreText.setText(this.score.toString().padStart(2, '0'));
+      if (this.score < 0) this.score = 0;
+      const poppedBubbleCount = this.analytics.reactionTimes.length;
+      this.scoreText.setText(poppedBubbleCount.toString().padStart(2, '0'));
 
       if (this.scoreFillImage) {
          
@@ -827,7 +827,7 @@ export class Game extends Phaser.Scene {
       }
 
       let scorePopup = this.add.text(popX, popY, textScorePopUp, {
-            fontFamily: 'lilita-one',
+            fontFamily: 'LilitaOne',
             fontSize: '48px',
             fill: '#ffffff',
             stroke: '#000000',
