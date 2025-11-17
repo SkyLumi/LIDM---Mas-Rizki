@@ -1,8 +1,20 @@
-export class LevelMenu extends Phaser.Scene {
 
-    constructor() {
-        super('LevelMenu')
-    }
+// You can write more code here
+
+/* START OF COMPILED CODE */
+
+/* START-USER-IMPORTS */
+/* END-USER-IMPORTS */
+
+export default class LevelMenu extends Phaser.Scene {
+
+	constructor() {
+		super("LevelMenu");
+
+		/* START-USER-CTR-CODE */
+		// Write your code here.
+		/* END-USER-CTR-CODE */
+	}
 
 	/** @returns {void} */
 	editorCreate() {
@@ -38,7 +50,6 @@ export class LevelMenu extends Phaser.Scene {
 
 		// close_btn
 		const close_btn = this.add.image(1312, 224, "close-btn");
-        close_btn.setInteractive()
 		close_btn.scaleX = 0.5;
 		close_btn.scaleY = 0.5;
 
@@ -46,12 +57,12 @@ export class LevelMenu extends Phaser.Scene {
 
 		//              Hover Animation             //
 
-        const normalScale = 0.5;
-        const hoverScale = 0.6;
+        const normalScale = 1;
+        const hoverScale = 1.1;
         const tweenDuration = 100;
 
-        const normalScaleLevel = 1.5;
-        const hoverScaleLevel = 1.7;
+        const normalScaleLevel = 0.8;
+        const hoverScaleLevel = 0.9;
 
         close_btn.on('pointerover', () => {
             this.tweens.add({
@@ -150,6 +161,12 @@ export class LevelMenu extends Phaser.Scene {
 	create() {
 
 		this.editorCreate();
+
 	}
 
+	/* END-USER-CODE */
 }
+
+/* END OF COMPILED CODE */
+
+// You can write more code here
