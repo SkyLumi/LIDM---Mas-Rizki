@@ -652,8 +652,7 @@ export class Game extends Phaser.Scene {
 
       if (results.multiHandLandmarks && results.multiHandedness) {
          
-         const timestamp = this.time.now - this.analytics.gameStartTime;
-
+         const timestamp = this.time.now - this.analytics.gameStartTime;nmbjnm,
 
          results.multiHandLandmarks.forEach((landmarks, i) => {
             
