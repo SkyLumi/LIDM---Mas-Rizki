@@ -21,7 +21,7 @@ class MediaPipeManager {
     });
 
     this.hands.setOptions({
-      maxNumHands: 2,
+      maxNumHands: 1,
       modelComplexity: 0,
       minDetectionConfidence: 0.5,
       minTrackingConfidence: 0.5,
@@ -51,7 +51,6 @@ class MediaPipeManager {
     if (this.camera) {
       this.camera.stop();
     }
-    // MediaPipeManager._instance = null;
   }
 }
 

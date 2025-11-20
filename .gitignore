@@ -1,1 +1,4 @@
 node_modules
+venv
+face_recognition_models
+__pycache__
