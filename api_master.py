@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 from extensions import db
-from models import AsalSekolah
+from models import AsalSekolah, JenisHambatan
 
 master_bp = Blueprint('master_bp', __name__)
 
@@ -20,3 +20,13 @@ def get_sekolah_list():
     except Exception as e:
         print(f"Error get sekolah: {e}")
         return jsonify({"status": "gagal", "message": "Server error"}), 500
+
+@master_bp.route('/master/hambatan', methods=['GET'])
+def get_hambatan_list():
+    # Ambil semua data hambatan
+    data_hambatan = db.session.scalars(db.select(JenisHambatan)).all()
+    
+    return jsonify([
+        {'id': h.id_hambatan, 'nama': h.jenis_hambatan} 
+        for h in data_hambatan
+    ]), 200

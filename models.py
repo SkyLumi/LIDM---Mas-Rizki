@@ -113,11 +113,11 @@ class Profil(Base):
 
     id_profil: Mapped[int] = mapped_column(Integer, primary_key=True)
     id_pengguna: Mapped[int] = mapped_column(Integer, nullable=False)
-    nama_depan: Mapped[Optional[str]] = mapped_column(String(100))
-    nama_belakang: Mapped[Optional[str]] = mapped_column(String(100))
+    nama_lengkap: Mapped[Optional[str]] = mapped_column(String(100))
     avatar: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
     face_id: Mapped[Optional[str]] = mapped_column(String(100))
     kelas: Mapped[Optional[int]] = mapped_column(Integer)
+    nomor_absen: Mapped[Optional[int]] = mapped_column(Integer)
     id_hambatan: Mapped[Optional[int]] = mapped_column(Integer)
     id_sekolah: Mapped[Optional[int]] = mapped_column(Integer)
 

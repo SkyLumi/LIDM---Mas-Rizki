@@ -14,13 +14,16 @@ from werkzeug.security import check_password_hash, generate_password_hash
 # 1. Bikin "Lemari"-nya
 auth_bp = Blueprint('auth_bp', __name__)
 
-# 3. "Penerjemah" (Pindah ke sini)
 def image_base64_to_encoding(image_base64):
-    # ... (Semua kode 'image_base64_to_encoding' Abang, GAK BERUBAH) ...
     try:
-        header, encoded = image_base64.split(",", 1)
+        if ',' in image_base64:
+            header, encoded = image_base64.split(",", 1)
+        else:
+            encoded = image_base64
         image_data = base64.b64decode(encoded)
         image = Image.open(io.BytesIO(image_data))
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
         image_np = np.array(image)
         face_locations = face_recognition.face_locations(image_np)
         if not face_locations:
@@ -77,7 +80,7 @@ def login_wajah():
                 # (Ambil path dari DB, misal: 'static/encodings/profil_123.npy')
                 encoding = np.load(profil.face_id) 
                 known_encodings.append(encoding)
-                known_metadata.append({"id_murid": profil.id_profil, "nama": profil.nama_depan})
+                known_metadata.append({"id_murid": profil.id_profil, "nama": profil.nama_lengkap})
             except Exception as e:
                 print(f"Warning: Gagal load encoding file {profil.face_id}: {e}")
                 
@@ -121,7 +124,7 @@ def guru_register():
         
         new_profil = Profil(
             id_pengguna=new_user.id_pengguna,
-            nama_depan=nama_lengkap, 
+            nama_lengkap=nama_lengkap, 
             id_sekolah=id_sekolah
         )
         db.session.add(new_profil)
@@ -141,6 +144,7 @@ def guru_login():
     email = data.get('email')
     kata_sandi = data.get('kata_sandi')
 
+
     user = db.session.scalar(db.select(Pengguna).where(Pengguna.email == email))
     
     # 2. Cek Kunci & Password (Pake 'user' asli)
@@ -153,7 +157,9 @@ def guru_login():
     session['role_id'] = user.id_role
     
     # 4. Cari profilnya buat dikirim balik (Pake "Jurus Baru")
+    role = db.session.scalar(db.select(Role).where(Role.id_role == user.id_role))
     profil = db.session.scalar(db.select(Profil).where(Profil.id_pengguna == user.id_pengguna))
+    sekolah = db.session.scalar(db.select(AsalSekolah).where(AsalSekolah.id_sekolah == profil.id_sekolah))
     
     if not profil:
         return jsonify({"status": "gagal", "message": "Profil pengguna tidak ditemukan"}), 404
@@ -166,9 +172,12 @@ def guru_login():
         "status": "sukses", 
         "message": "Login berhasil",
         "user": {
-            "nama": profil.nama_depan,
-            "id_sekolah": profil.id_sekolah,
-            "id_profil": profil.id_profil
+            "nama": profil.nama_lengkap,
+            "nama_sekolah": sekolah.nama_sekolah,
+            "email": email,
+            "id_profil": profil.id_profil,
+            "id_role": user.id_role,
+            "role": role.nama_role
         }
     }), 200
 
@@ -176,15 +185,15 @@ def guru_login():
 @guru_required
 def guru_tambah_murid():
     data = request.json
-    nama_depan = data.get('nama_depan')
-    nama_belakang = data.get('nama_belakang')
-    nomor_absen = data.get('nomor_absen') # (kelas)
+    nama_lengkap = data.get('nama_lengkap')
+    nomor_absen = data.get('nomor_absen')
+    id_kelas = data.get('id_kelas')
     id_hambatan = data.get('id_hambatan')
-    email_murid = data.get('email')     
+    email_murid = data.get('email')
     password_murid = data.get('password') 
     image_base64 = data.get('image_base64') # (Opsional)
     
-    if not nama_depan or not nomor_absen or not id_hambatan:
+    if not nama_lengkap or not nomor_absen or not id_hambatan:
         return jsonify({"status": "gagal", "message": "Nama Depan, Absen, dan Hambatan wajib diisi."}), 400
 
     try:
@@ -224,11 +233,11 @@ def guru_tambah_murid():
 
         new_profil_murid = Profil(
             id_pengguna=new_user_murid.id_pengguna,
-            nama_depan=nama_depan,
-            nama_belakang=nama_belakang,
-            kelas=int(nomor_absen), 
+            nama_lengkap=nama_lengkap,
+            kelas=int(id_kelas),
+            nomor_absen=int(nomor_absen), 
             id_hambatan=int(id_hambatan),
-            id_sekolah=sekolah_otomatis # <-- "OTOMATIS"
+            id_sekolah=sekolah_otomatis
         )
         db.session.add(new_profil_murid)
         db.session.commit()
@@ -242,16 +251,16 @@ def guru_tambah_murid():
                 
                 new_profil_murid.face_id = file_path
                 db.session.commit()
-                print(f"Berhasil simpan face encoding untuk: {nama_depan}")
+                print(f"Berhasil simpan face encoding untuk: {nama_lengkap}")
             else:
-                print(f"Warning: Wajah murid {nama_depan} ada, tapi tidak terdeteksi.")
+                print(f"Warning: Wajah murid {nama_lengkap} ada, tapi tidak terdeteksi.")
         
         # 5. SELESAI
-        print(f"GURU ({profil_guru.nama_depan}) berhasil mendaftarkan MURID: {nama_depan}")
+        print(f"GURU ({profil_guru.nama_lengkap}) berhasil mendaftarkan MURID: {nama_lengkap}")
         return jsonify({
             "status": "sukses", 
             "message": "Murid berhasil ditambahkan",
-            "murid": {"id_profil": new_profil_murid.id_profil, "nama_depan": new_profil_murid.nama_depan}
+            "murid": {"id_profil": new_profil_murid.id_profil, "nama_lengkap": new_profil_murid.nama_lengkap}
         }), 201
 
     except Exception as e:
@@ -288,10 +297,8 @@ def guru_update_murid(id_profil):
         
         # --- 4. UPDATE "PROFIL" (Data Gampang) ---
         # (Kita pake .get() biar "opsional", kalo gak diisi, gak berubah)
-        if 'nama_depan' in data:
-            profil_murid.nama_depan = data.get('nama_depan')
-        if 'nama_belakang' in data:
-            profil_murid.nama_belakang = data.get('nama_belakang')
+        if 'nama_lengkap' in data:
+            profil_murid.nama_lengkap = data.get('nama_lengkap')
         if 'nomor_absen' in data:
             profil_murid.kelas = int(data.get('nomor_absen'))
         if 'id_hambatan' in data:
@@ -327,13 +334,13 @@ def guru_update_murid(id_profil):
                 np.save(file_path, face_encoding)
                 
                 profil_murid.face_id = file_path # (Pastikan path-nya ke-update)
-                print(f"Berhasil UPDATE face encoding untuk: {profil_murid.nama_depan}")
+                print(f"Berhasil UPDATE face encoding untuk: {profil_murid.nama_lengkap}")
             else:
-                print(f"Warning: Wajah murid {profil_murid.nama_depan} di-update, tapi tidak terdeteksi.")
+                print(f"Warning: Wajah murid {profil_murid.nama_lengkap} di-update, tapi tidak terdeteksi.")
         
         db.session.commit()
         
-        print(f"GURU ({profil_guru.nama_depan}) berhasil MENG-UPDATE MURID: {profil_murid.nama_depan}")
+        print(f"GURU ({profil_guru.nama_lengkap}) berhasil MENG-UPDATE MURID: {profil_murid.nama_lengkap}")
         return jsonify({
             "status": "sukses", 
             "message": "Murid berhasil diupdate"
@@ -369,8 +376,7 @@ def guru_get_murid_detail(id_profil):
         # --- 4. "BUNGKUS" JADI JSON ---
         data_murid = {
             "id_profil": profil_murid.id_profil,
-            "nama_depan": profil_murid.nama_depan,
-            "nama_belakang": profil_murid.nama_belakang,
+            "nama_lengkap": profil_murid.nama_lengkap,
             "nomor_absen": profil_murid.kelas, # Kirim 'nomor_absen'
             "id_hambatan": profil_murid.id_hambatan,
             "email": user_murid.email
@@ -386,61 +392,46 @@ def guru_get_murid_detail(id_profil):
     
 @auth_bp.route('/guru/murid/list', methods=['GET'])
 @guru_required
-def guru_list_murid():
-    """
-    API (HANYA GURU) buat nampilin SEMUA murid di sekolah guru tersebut.
-   
-    """
+def guru_get_murid_list():
     try:
-        # 1. Ambil Data Guru (Buat tau sekolahnya)
+        # 1. Cari Guru & Sekolahnya
         guru_id = session.get('user_id')
-        guru_profil = db.session.scalar(db.select(Profil).where(Profil.id_pengguna == guru_id))
+        profil_guru = db.session.scalar(db.select(Profil).where(Profil.id_pengguna == guru_id))
         
-        if not guru_profil:
-            return jsonify({"status": "gagal", "message": "Profil Guru tidak valid"}), 403
+        if not profil_guru:
+            return jsonify([]), 200 
 
-        # 2. Ambil Semua Murid di Sekolah yg Sama
-        # (Kita JOIN ke Pengguna & Role buat pastiin dia 'Murid')
-        # (Kita JOIN ke JenisHambatan buat dapet nama hambatannya)
         stmt = (
-            db.select(Profil, JenisHambatan.jenis_hambatan)
+            db.select(Profil, Pengguna.email, Role.nama_role, JenisHambatan.jenis_hambatan)
             .join(Pengguna, Profil.id_pengguna == Pengguna.id_pengguna)
             .join(Role, Pengguna.id_role == Role.id_role)
             .outerjoin(JenisHambatan, Profil.id_hambatan == JenisHambatan.id_hambatan)
             .where(
-                Profil.id_sekolah == guru_profil.id_sekolah,
+                Profil.id_sekolah == profil_guru.id_sekolah,
                 Role.nama_role == 'Murid'
             )
-            .order_by(Profil.nama_depan.asc())
         )
         
         results = db.session.execute(stmt).all()
         
-        # 3. Bungkus jadi JSON
         list_murid = []
-        for row in results:
-            profil = row[0] # Objek Profil
-            nama_hambatan = row[1] # String (misal: "Autisme")
-
+        for profil, email, role_name, nama_hambatan in results:
             list_murid.append({
-                "id_profil": profil.id_profil,
-                "nama_lengkap": f"{profil.nama_depan} {profil.nama_belakang or ''}".strip(),
-                "nomor_absen": profil.kelas,
-                "hambatan": nama_hambatan if nama_hambatan else "-",
-                "status_wajah": True if profil.face_id else False # Cek udah ada foto belum
+                "id": profil.id_profil,
+                "name": profil.nama_lengkap,
+                "absen": str(profil.nomor_absen),
+                "kelas": str(profil.kelas),
+                "email": email,
+                "disability": nama_hambatan if nama_hambatan else "-",
+                "image": "",
+                "password": "jangandiliatbang"
             })
-
-        return jsonify({
-            "status": "sukses",
-            "sekolah": guru_profil.Asal_Sekolah.nama_sekolah if guru_profil.Asal_Sekolah else "-",
-            "total": len(list_murid),
-            "data": list_murid
-        }), 200
+            
+        return jsonify(list_murid), 200
 
     except Exception as e:
-        print(f"Error list murid: {e}")
-        return jsonify({"status": "gagal", "message": "Terjadi kesalahan server"}), 500
-
+        print(f"Error get murid: {e}")
+        return jsonify({"message": "Gagal mengambil data"}), 500
 
 @auth_bp.route('/guru/logout', methods=['POST'])
 def guru_logout():

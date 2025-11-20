@@ -1,5 +1,6 @@
 # app.py
 from flask import Flask, render_template, redirect
+from flask_cors import CORS
 import os # (Buat 'secret_key')
 
 # 1. "Panggil" Lemari Abang
@@ -32,6 +33,10 @@ app.register_blueprint(auth_bp, url_prefix='/v1') # (Semua API auth jadi /v1/gur
 app.register_blueprint(analytics_bp)              # (API analytics tetep /analytics/save)
 app.register_blueprint(master_bp, url_prefix='/v1')
 
+CORS(app, 
+     supports_credentials=True, 
+     resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}}
+)
 
 # -----------------------------------------------------------------
 # (Route "Biasa" / Non-API, Abang taruh di sini aja Gak apa-apa)
