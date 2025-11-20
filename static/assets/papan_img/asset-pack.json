@@ -1,0 +1,404 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "static/assets/papan_img/1.png",
+                "type": "image",
+                "key": "1"
+            },
+            {
+                "url": "static/assets/papan_img/2.png",
+                "type": "image",
+                "key": "2"
+            },
+            {
+                "url": "static/assets/papan_img/3.png",
+                "type": "image",
+                "key": "3"
+            },
+            {
+                "url": "static/assets/papan_img/750.png",
+                "type": "image",
+                "key": "750"
+            },
+            {
+                "url": "static/assets/papan_img/apel.png",
+                "type": "image",
+                "key": "apel"
+            },
+            {
+                "url": "static/assets/papan_img/backgrounds.png",
+                "type": "image",
+                "key": "backgrounds"
+            },
+            {
+                "url": "static/assets/papan_img/ban.png",
+                "type": "image",
+                "key": "ban"
+            },
+            {
+                "url": "static/assets/papan_img/bebek.png",
+                "type": "image",
+                "key": "bebek"
+            },
+            {
+                "url": "static/assets/papan_img/bola.png",
+                "type": "image",
+                "key": "bola"
+            },
+            {
+                "url": "static/assets/papan_img/bucket.png",
+                "type": "image",
+                "key": "bucket"
+            },
+            {
+                "url": "static/assets/papan_img/bucket_roda.png",
+                "type": "image",
+                "key": "bucket_roda"
+            },
+            {
+                "url": "static/assets/kartu_img/Card Back 1.png",
+                "type": "image",
+                "key": "Card Back 1"
+            },
+            {
+                "url": "static/assets/papan_img/close-btn.png",
+                "type": "image",
+                "key": "close-btn"
+            },
+            {
+                "url": "static/assets/papan_img/continue-btn.png",
+                "type": "image",
+                "key": "continue-btn"
+            },
+            {
+                "url": "static/assets/papan_img/Drop Point Gear.png",
+                "type": "image",
+                "key": "Drop Point Gear"
+            },
+            {
+                "url": "static/assets/papan_img/dropPointandGear.png",
+                "type": "image",
+                "key": "dropPointandGear"
+            },
+            {
+                "url": "static/assets/kartu_img/Frame 1261153332.png",
+                "type": "image",
+                "key": "Frame 1261153332"
+            },
+            {
+                "url": "static/assets/kartu_img/game_bg.png",
+                "type": "image",
+                "key": "game_bg"
+            },
+            {
+                "url": "static/assets/kartu_img/Group 427320172.png",
+                "type": "image",
+                "key": "Group 427320172"
+            },
+            {
+                "url": "static/assets/kartu_img/health_.png",
+                "type": "image",
+                "key": "health_"
+            },
+            {
+                "url": "static/assets/papan_img/home.png",
+                "type": "image",
+                "key": "home"
+            },
+            {
+                "url": "static/assets/kartu_img/home_bg.jpg",
+                "type": "image",
+                "key": "home_bg"
+            },
+            {
+                "url": "static/assets/papan_img/home-btn.png",
+                "type": "image",
+                "key": "home-btn"
+            },
+            {
+                "url": "static/assets/kartu_img/HomeButton.png",
+                "type": "image",
+                "key": "HomeButton"
+            },
+            {
+                "url": "static/assets/papan_img/jeruk.png",
+                "type": "image",
+                "key": "jeruk"
+            },
+            {
+                "url": "static/assets/kartu_img/judul_kartu.png",
+                "type": "image",
+                "key": "judul_kartu"
+            },
+            {
+                "url": "static/assets/papan_img/kaca.png",
+                "type": "image",
+                "key": "kaca"
+            },
+            {
+                "url": "static/assets/kartu_img/keluar_.png",
+                "type": "image",
+                "key": "keluar_"
+            },
+            {
+                "url": "static/assets/kartu_img/kembali_.png",
+                "type": "image",
+                "key": "kembali_"
+            },
+            {
+                "url": "static/assets/papan_img/Kerja Bagus !.png",
+                "type": "image",
+                "key": "Kerja Bagus !"
+            },
+            {
+                "url": "static/assets/kartu_img/KERJA BAGUS ! (2).png",
+                "type": "image",
+                "key": "KERJA BAGUS ! (2)"
+            },
+            {
+                "url": "static/assets/papan_img/leftbar.png",
+                "type": "image",
+                "key": "leftbar"
+            },
+            {
+                "url": "static/assets/papan_img/Level 1.png",
+                "type": "image",
+                "key": "Level 1"
+            },
+            {
+                "url": "static/assets/papan_img/Level 2.png",
+                "type": "image",
+                "key": "Level 2"
+            },
+            {
+                "url": "static/assets/papan_img/Level 3.png",
+                "type": "image",
+                "key": "Level 3"
+            },
+            {
+                "url": "static/assets/kartu_img/Level Button 1.png",
+                "type": "image",
+                "key": "Level Button 1"
+            },
+            {
+                "url": "static/assets/kartu_img/Level Button 2.png",
+                "type": "image",
+                "key": "Level Button 2"
+            },
+            {
+                "url": "static/assets/kartu_img/Level Button 3.png",
+                "type": "image",
+                "key": "Level Button 3"
+            },
+            {
+                "url": "static/assets/kartu_img/LEVEL_.png",
+                "type": "image",
+                "key": "LEVEL_"
+            },
+            {
+                "url": "static/assets/kartu_img/level_bg.jpg",
+                "type": "image",
+                "key": "level_bg"
+            },
+            {
+                "url": "static/assets/papan_img/level1btn.png",
+                "type": "image",
+                "key": "level1btn"
+            },
+            {
+                "url": "static/assets/papan_img/levelbox.png",
+                "type": "image",
+                "key": "levelbox"
+            },
+            {
+                "url": "static/assets/papan_img/levelLockedbtn.png",
+                "type": "image",
+                "key": "levelLockedbtn"
+            },
+            {
+                "url": "static/assets/papan_img/mulai_button.png",
+                "type": "image",
+                "key": "mulai_button"
+            },
+            {
+                "url": "static/assets/papan_img/mute-active-button.png",
+                "type": "image",
+                "key": "mute-active-button"
+            },
+            {
+                "url": "static/assets/papan_img/mute-nonactive-button.png",
+                "type": "image",
+                "key": "mute-nonactive-button"
+            },
+            {
+                "url": "static/assets/papan_img/next_stage.png",
+                "type": "image",
+                "key": "next_stage"
+            },
+            {
+                "url": "static/assets/kartu_img/nextLevel.png",
+                "type": "image",
+                "key": "nextLevel"
+            },
+            {
+                "url": "static/assets/papan_img/papan.png",
+                "type": "image",
+                "key": "papan"
+            },
+            {
+                "url": "static/assets/papan_img/paus.png",
+                "type": "image",
+                "key": "paus"
+            },
+            {
+                "url": "static/assets/kartu_img/pause_.png",
+                "type": "image",
+                "key": "pause_"
+            },
+            {
+                "url": "static/assets/papan_img/pause-btn.png",
+                "type": "image",
+                "key": "pause-btn"
+            },
+            {
+                "url": "static/assets/kartu_img/pengaturan_.png",
+                "type": "image",
+                "key": "pengaturan_"
+            },
+            {
+                "url": "static/assets/kartu_img/play_.png",
+                "type": "image",
+                "key": "play_"
+            },
+            {
+                "url": "static/assets/papan_img/poof.png",
+                "type": "image",
+                "key": "poof"
+            },
+            {
+                "url": "static/assets/papan_img/replay.png",
+                "type": "image",
+                "key": "replay"
+            },
+            {
+                "url": "static/assets/papan_img/result-0star.png",
+                "type": "image",
+                "key": "result-0star"
+            },
+            {
+                "url": "static/assets/papan_img/result-1star.png",
+                "type": "image",
+                "key": "result-1star"
+            },
+            {
+                "url": "static/assets/papan_img/result-2star.png",
+                "type": "image",
+                "key": "result-2star"
+            },
+            {
+                "url": "static/assets/papan_img/result-3star.png",
+                "type": "image",
+                "key": "result-3star"
+            },
+            {
+                "url": "static/assets/papan_img/retry-btn.png",
+                "type": "image",
+                "key": "retry-btn"
+            },
+            {
+                "url": "static/assets/kartu_img/RetryButton.png",
+                "type": "image",
+                "key": "RetryButton"
+            },
+            {
+                "url": "static/assets/papan_img/rightbar.png",
+                "type": "image",
+                "key": "rightbar"
+            },
+            {
+                "url": "static/assets/papan_img/Score.png",
+                "type": "image",
+                "key": "Score"
+            },
+            {
+                "url": "static/assets/papan_img/setting-menu.png",
+                "type": "image",
+                "key": "setting-menu"
+            },
+            {
+                "url": "static/assets/kartu_img/skor_.png",
+                "type": "image",
+                "key": "skor_"
+            },
+            {
+                "url": "static/assets/papan_img/sound-active-button.png",
+                "type": "image",
+                "key": "sound-active-button"
+            },
+            {
+                "url": "static/assets/papan_img/sound-nonactive-button.png",
+                "type": "image",
+                "key": "sound-nonactive-button"
+            },
+            {
+                "url": "static/assets/kartu_img/time_.png",
+                "type": "image",
+                "key": "time_"
+            },
+            {
+                "url": "static/assets/papan_img/titlebox.png",
+                "type": "image",
+                "key": "titlebox"
+            },
+            {
+                "url": "static/assets/papan_img/tombolKeluar.png",
+                "type": "image",
+                "key": "tombolKeluar"
+            },
+            {
+                "url": "static/assets/papan_img/tombolPengaturan.png",
+                "type": "image",
+                "key": "tombolPengaturan"
+            },
+            {
+                "url": "static/assets/papan_img/tombolPlay.png",
+                "type": "image",
+                "key": "tombolPlay"
+            },
+            {
+                "url": "static/assets/papan_img/topbar.png",
+                "type": "image",
+                "key": "topbar"
+            },
+            {
+                "url": "static/assets/papan_img/topbarr.png",
+                "type": "image",
+                "key": "topbarr"
+            },
+            {
+                "url": "static/assets/kartu_img/tutor_.png",
+                "type": "image",
+                "key": "tutor_"
+            },
+            {
+                "url": "static/assets/papan_img/tutorial.png",
+                "type": "image",
+                "key": "tutorial"
+            },
+            {
+                "url": "static/assets/papan_img/volley.png",
+                "type": "image",
+                "key": "volley"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

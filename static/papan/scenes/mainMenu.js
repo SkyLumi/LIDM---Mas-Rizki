@@ -3,88 +3,92 @@ export class MainMenu extends Phaser.Scene {
         super('MainMenu')
     }
 
-    create() {
-        const { width, height } = this.sys.game.config
+    editorCreate() {
 
-        let screenCenterX = width / 2
-        let screenCenterY = height / 2
+		// backgrounds
+		const backgrounds = this.add.image(0, 0, "backgrounds");
+		backgrounds.scaleX = 1.5048153631225618;
+		backgrounds.scaleY = 1.5048153631225618;
+		backgrounds.setOrigin(0, 0);
 
-        this.add.image(screenCenterX, screenCenterY, 'menuBG')
-            .setScale(0.77)
+		// titlebox
+		const titlebox = this.add.image(1040, 448, "titlebox");
+		titlebox.scaleX = 1.4984553496180204;
+		titlebox.scaleY = 1.4984553496180204;
 
-        this.add.image(screenCenterX + 25, screenCenterY + 10, 'titleBox')
-            .setScale(0.38)
+		// tombolPengaturan
+		const tombolPengaturan = this.add.image(976, 672, "tombolPengaturan");
+		tombolPengaturan.setInteractive(new Phaser.Geom.Rectangle(0, 0, 200, 48), Phaser.Geom.Rectangle.Contains);
+		tombolPengaturan.scaleX = 1.4320753177975822;
+		tombolPengaturan.scaleY = 1.4320753177975822;
 
-        let buttonContainer = this.add.container(screenCenterX, screenCenterY + 240)
+		// tombolKeluar
+		const tombolKeluar = this.add.image(1296, 672, "tombolKeluar");
+		tombolKeluar.setInteractive(new Phaser.Geom.Rectangle(0, 0, 200, 48), Phaser.Geom.Rectangle.Contains);
+		tombolKeluar.scaleX = 1.4320753177975822;
+		tombolKeluar.scaleY = 1.4320753177975822;
 
-        const playButton = this.add.image(-360, 0, 'playButton')
-            .setScale(0.8)
-            .setInteractive()
+		// tombolPlay
+		const tombolPlay = this.add.image(656, 672, "tombolPlay");
+		tombolPlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 200, 48), Phaser.Geom.Rectangle.Contains);
+		tombolPlay.scaleX = 1.4320753177975822;
+		tombolPlay.scaleY = 1.4320753177975822;
 
-        const settingsButton = this.add.image(0, 0, 'settingsButton')
-            .setScale(0.8)
-            .setInteractive()
+		this.events.emit("scene-awake");
+                //              Hover Animation               //
 
-        const quitButton = this.add.image(360, 0, 'quitButton')
-            .setScale(0.8)
-            .setInteractive()
-
-        buttonContainer.add([playButton, settingsButton, quitButton])
-
-        //              Hover Animation               //
-
-        const normalScale = 0.8;
-        const hoverScale = 0.9;
+        const normalScale = 1.4320753177975822;
+        const hoverScale = 1.6320753177975822;
         const tweenDuration = 100;
 
-        playButton.on('pointerover', () => {
+        tombolPlay.on('pointerover', () => {
             this.tweens.add({
-                targets: playButton,
+                targets: tombolPlay,
                 scale: hoverScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        playButton.on('pointerout', () => {
+        tombolPlay.on('pointerout', () => {
             this.tweens.add({
-                targets: playButton,
+                targets: tombolPlay,
                 scale: normalScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        settingsButton.on('pointerover', () => {
+        tombolPengaturan.on('pointerover', () => {
             this.tweens.add({
-                targets: settingsButton,
+                targets: tombolPengaturan,
                 scale: hoverScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        settingsButton.on('pointerout', () => {
+        tombolPengaturan.on('pointerout', () => {
             this.tweens.add({
-                targets: settingsButton,
+                targets: tombolPengaturan,
                 scale: normalScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        quitButton.on('pointerover', () => {
+        tombolKeluar.on('pointerover', () => {
             this.tweens.add({
-                targets: quitButton,
+                targets: tombolKeluar,
                 scale: hoverScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        quitButton.on('pointerout', () => {
+        tombolKeluar.on('pointerout', () => {
             this.tweens.add({
-                targets: quitButton,
+                targets: tombolKeluar,
                 scale: normalScale,
                 duration: tweenDuration,
                 ease: 'Power1'
@@ -92,16 +96,26 @@ export class MainMenu extends Phaser.Scene {
         });
 
         //              Click Logic                // 
-        playButton.on('pointerdown', () => {
+        tombolPlay.on('pointerdown', () => {
             this.scene.start('LevelMenu')
         })
 
-        settingsButton.on('pointerdown', () => {
+        tombolPengaturan.on('pointerdown', () => {
             this.scene.start('LevelMenu')
         })
 
-        quitButton.on('pointerdown', () => {
+        tombolKeluar.on('pointerdown', () => {
             this.scene.start('LevelMenu')
         })
-    }
+	}
+
+	/* START-USER-CODE */
+
+	// Write more your code here
+
+	create() {
+
+		this.editorCreate();
+
+	}
 }
