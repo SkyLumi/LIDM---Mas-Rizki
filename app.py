@@ -5,6 +5,7 @@ import os # (Buat 'secret_key')
 # 1. "Panggil" Lemari Abang
 from api_auth import auth_bp
 from api_analytics import analytics_bp
+from api_master import master_bp
 from extensions import db
 from flask_migrate import Migrate
 
@@ -29,6 +30,7 @@ migrate = Migrate(app, db)
 # 4. "Masukin" Lemari ke Kamar
 app.register_blueprint(auth_bp, url_prefix='/v1') # (Semua API auth jadi /v1/guru/login)
 app.register_blueprint(analytics_bp)              # (API analytics tetep /analytics/save)
+app.register_blueprint(master_bp, url_prefix='/v1')
 
 
 # -----------------------------------------------------------------

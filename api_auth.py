@@ -1,5 +1,5 @@
 from extensions import db
-from models import Pengguna, Profil, Role, AsalSekolah
+from models import Pengguna, Profil, Role, AsalSekolah, JenisHambatan
 from flask import Blueprint, request, jsonify, session, current_app
 from functools import wraps
 import face_recognition
@@ -383,4 +383,120 @@ def guru_get_murid_detail(id_profil):
         db.session.rollback()
         print(f"Gagal get murid detail: {e}")
         return jsonify({"status": "gagal", "message": "Terjadi kesalahan"}), 500
+    
+@auth_bp.route('/guru/murid/list', methods=['GET'])
+@guru_required
+def guru_list_murid():
+    """
+    API (HANYA GURU) buat nampilin SEMUA murid di sekolah guru tersebut.
+   
+    """
+    try:
+        # 1. Ambil Data Guru (Buat tau sekolahnya)
+        guru_id = session.get('user_id')
+        guru_profil = db.session.scalar(db.select(Profil).where(Profil.id_pengguna == guru_id))
+        
+        if not guru_profil:
+            return jsonify({"status": "gagal", "message": "Profil Guru tidak valid"}), 403
+
+        # 2. Ambil Semua Murid di Sekolah yg Sama
+        # (Kita JOIN ke Pengguna & Role buat pastiin dia 'Murid')
+        # (Kita JOIN ke JenisHambatan buat dapet nama hambatannya)
+        stmt = (
+            db.select(Profil, JenisHambatan.jenis_hambatan)
+            .join(Pengguna, Profil.id_pengguna == Pengguna.id_pengguna)
+            .join(Role, Pengguna.id_role == Role.id_role)
+            .outerjoin(JenisHambatan, Profil.id_hambatan == JenisHambatan.id_hambatan)
+            .where(
+                Profil.id_sekolah == guru_profil.id_sekolah,
+                Role.nama_role == 'Murid'
+            )
+            .order_by(Profil.nama_depan.asc())
+        )
+        
+        results = db.session.execute(stmt).all()
+        
+        # 3. Bungkus jadi JSON
+        list_murid = []
+        for row in results:
+            profil = row[0] # Objek Profil
+            nama_hambatan = row[1] # String (misal: "Autisme")
+
+            list_murid.append({
+                "id_profil": profil.id_profil,
+                "nama_lengkap": f"{profil.nama_depan} {profil.nama_belakang or ''}".strip(),
+                "nomor_absen": profil.kelas,
+                "hambatan": nama_hambatan if nama_hambatan else "-",
+                "status_wajah": True if profil.face_id else False # Cek udah ada foto belum
+            })
+
+        return jsonify({
+            "status": "sukses",
+            "sekolah": guru_profil.Asal_Sekolah.nama_sekolah if guru_profil.Asal_Sekolah else "-",
+            "total": len(list_murid),
+            "data": list_murid
+        }), 200
+
+    except Exception as e:
+        print(f"Error list murid: {e}")
+        return jsonify({"status": "gagal", "message": "Terjadi kesalahan server"}), 500
+
+
+@auth_bp.route('/guru/logout', methods=['POST'])
+def guru_logout():
+    """
+    API Logout (Hapus Session)
+    """
+    session.clear() # SAPU BERSIH
+    return jsonify({"status": "sukses", "message": "Berhasil logout"}), 200
+
+
+@auth_bp.route('/guru/murid/<int:id_profil>', methods=['DELETE'])
+@guru_required
+def guru_delete_murid(id_profil):
+    """
+    API (HANYA GURU) Hapus Murid + File Wajah + Akun Login
+    """
+    try:
+        # 1. Cari Muridnya
+        profil_murid = db.session.get(Profil, id_profil)
+        if not profil_murid:
+            return jsonify({"status": "gagal", "message": "Murid tidak ditemukan"}), 404
+
+        # 2. Cek Keamanan (Guru Sekolah A gaboleh hapus Murid Sekolah B)
+        guru_id = session.get('user_id')
+        guru_profil = db.session.scalar(db.select(Profil).where(Profil.id_pengguna == guru_id))
+        
+        if not guru_profil or profil_murid.id_sekolah != guru_profil.id_sekolah:
+            return jsonify({"status": "gagal", "message": "Akses ditolak"}), 403
+
+        # 3. HAPUS FILE WAJAH (Kalo ada)
+        if profil_murid.face_id:
+            try:
+                # face_id isinya path (static/encodings/...)
+                if os.path.exists(profil_murid.face_id):
+                    os.remove(profil_murid.face_id)
+                    print(f"File wajah dihapus: {profil_murid.face_id}")
+            except Exception as e:
+                print(f"Warning: Gagal hapus file wajah: {e}")
+
+        # 4. HAPUS DATA DB
+        # Kita hapus 'Pengguna' (Induknya), nanti 'Profil' (Anaknya)
+        # otomatis kehapus karena 'ondelete=CASCADE' di models.py
+        user_to_delete = db.session.get(Pengguna, profil_murid.id_pengguna)
+        
+        if user_to_delete:
+            db.session.delete(user_to_delete)
+            db.session.commit()
+            return jsonify({"status": "sukses", "message": "Murid berhasil dihapus"}), 200
+        else:
+            # Jaga-jaga kalo datanya 'yatim' (punya profil gapunya user)
+            db.session.delete(profil_murid)
+            db.session.commit()
+            return jsonify({"status": "sukses", "message": "Profil murid dihapus (User tidak ditemukan)"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error delete murid: {e}")
+        return jsonify({"status": "gagal", "message": "Gagal menghapus data"}), 500
 

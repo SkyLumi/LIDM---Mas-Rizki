@@ -166,6 +166,5 @@ class Laporan(Base):
     ketangkasan: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric)
     memori: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric)
     heatmap: Mapped[Optional[dict]] = mapped_column(JSONB)
-    waktu_tanggal: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, server_default=text('now()'))
 
     Game_aktual: Mapped['GameAktual'] = relationship('GameAktual', back_populates='Laporan')
