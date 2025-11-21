@@ -66,7 +66,8 @@ def login_wajah():
         
     try:
         # 1. Ambil SEMUA "Sidik Jari" dari DB
-        all_profiles = Profil.query.filter(Profil.face_id.isnot(None)).all()
+        stmt = db.select(Profil).where(Profil.face_id.isnot(None))
+        all_profiles = db.session.scalars(stmt).all()
         
         if not all_profiles:
             print("LOGIN GAGAL: Belum ada wajah terdaftar di DB")

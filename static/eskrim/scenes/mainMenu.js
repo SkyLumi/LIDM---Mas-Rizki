@@ -33,19 +33,19 @@ export class MainMenu extends Phaser.Scene {
 
         let buttonContainer = this.add.container(screenCenterX, screenCenterY + 240)
 
-        const playButton = this.add.image(-360, 0, 'playButton')
+        this.playButton = this.add.image(-360, 0, 'playButton')
+            .setScale(0.8)
+            .setTint(0x555555);
+
+        this.settingsButton = this.add.image(0, 0, 'settingsButton')
             .setScale(0.8)
             .setInteractive()
 
-        const settingsButton = this.add.image(0, 0, 'settingsButton')
+        this.quitButton = this.add.image(360, 0, 'quitButton')
             .setScale(0.8)
             .setInteractive()
 
-        const quitButton = this.add.image(360, 0, 'quitButton')
-            .setScale(0.8)
-            .setInteractive()
-
-        buttonContainer.add([playButton, settingsButton, quitButton])
+        buttonContainer.add([this.playButton, this.settingsButton, this.quitButton])
 
         //              Hover Animation               //
 
@@ -53,54 +53,54 @@ export class MainMenu extends Phaser.Scene {
         const hoverScale = 0.9;
         const tweenDuration = 100;
 
-        playButton.on('pointerover', () => {
+        this.playButton.on('pointerover', () => {
             this.tweens.add({
-                targets: playButton,
+                targets: this.playButton,
                 scale: hoverScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        playButton.on('pointerout', () => {
+        this.playButton.on('pointerout', () => {
             this.tweens.add({
-                targets: playButton,
+                targets: this.playButton,
                 scale: normalScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        settingsButton.on('pointerover', () => {
+        this.settingsButton.on('pointerover', () => {
             this.tweens.add({
-                targets: settingsButton,
+                targets: this.settingsButton,
                 scale: hoverScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        settingsButton.on('pointerout', () => {
+        this.settingsButton.on('pointerout', () => {
             this.tweens.add({
-                targets: settingsButton,
+                targets: this.settingsButton,
                 scale: normalScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        quitButton.on('pointerover', () => {
+        this.quitButton.on('pointerover', () => {
             this.tweens.add({
-                targets: quitButton,
+                targets: this.quitButton,
                 scale: hoverScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        quitButton.on('pointerout', () => {
+        this.quitButton.on('pointerout', () => {
             this.tweens.add({
-                targets: quitButton,
+                targets: this.quitButton,
                 scale: normalScale,
                 duration: tweenDuration,
                 ease: 'Power1'
@@ -108,15 +108,15 @@ export class MainMenu extends Phaser.Scene {
         });
 
         //              Click Logic                // 
-        playButton.on('pointerdown', () => {
+        this.playButton.on('pointerdown', () => {
             this.scene.start('LevelMenu')
         })
 
-        settingsButton.on('pointerdown', () => {
+        this.settingsButton.on('pointerdown', () => {
             this.scene.start('LevelMenu')
         })
 
-        quitButton.on('pointerdown', () => {
+        this.quitButton.on('pointerdown', () => {
             this.scene.start('LevelMenu')
         })
 
@@ -150,9 +150,15 @@ export class MainMenu extends Phaser.Scene {
             });
             this.bgm.play();
         }
+
+        this.events.once('shutdown', this.shutdown, this)
     }
 
     onFaceResults(results) {
+
+        if (!this.sys || !this.sys.settings.active) {
+            return;
+        }
         
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
             // --- WAJAH KEDETEK ---
@@ -213,7 +219,7 @@ export class MainMenu extends Phaser.Scene {
         }
         
         try {
-            const response = await fetch('http://127.0.0.1:5000/login-wajah', {
+            const response = await fetch('http://127.0.0.1:5000/v1/login-wajah', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image_base64: imageBase64 })
@@ -234,17 +240,39 @@ export class MainMenu extends Phaser.Scene {
             this.welcomeText.setText(`Halo, ${result.murid.nama}!`);
             this.infoText.setText('Login sukses. Silakan mulai.');
             this.infoText.setColor('#00ff00');
+
+            if (this.playButton) {
+                this.playButton.setTint(0xffffff);
+                this.playButton.setInteractive();
+                
+                this.tweens.add({
+                    targets: this.playButton,
+                    scale: { from: 0.8, to: 1.0 },
+                    duration: 200,
+                    yoyo: true,
+                    onComplete: () => this.playButton.setScale(0.8)
+                });
+            }
         
         } catch (error) {
             // --- LOGIN GAGAL ---
             this.loginState = 'FAILED';
             this.infoText.setText(error.message); // (Misal: "Wajah tidak dikenal")
             this.infoText.setColor('#ff0000');
+            console.log(error.message)
+
+            if (this.playButton) {
+                this.playButton.setTint(0x555555);
+                this.playButton.disableInteractive();
+            }
         }
     }
 
     // --- FUNGSI "LOGOUT" (BARU) ---
     handleLogout() {
+        if (!this.welcomeText || !this.welcomeText.active) {
+            return; 
+        }
         console.log("LOGOUT: Wajah hilang, reset ke 'SEARCHING'.");
         this.loginState = 'SEARCHING';
         this.currentMuridId = null;
@@ -253,6 +281,11 @@ export class MainMenu extends Phaser.Scene {
         this.welcomeText.setText('Selamat Datang!');
         this.infoText.setText('Mencari wajah...');
         this.infoText.setColor('#ffff00');
+
+        if (this.playButton) {
+            this.playButton.setTint(0x555555); // Gelapin
+            this.playButton.disableInteractive(); // Gabisa dipencet
+        }
         
     }
 
@@ -283,5 +316,9 @@ export class MainMenu extends Phaser.Scene {
         ctx.scale(-1, 1);
         ctx.drawImage(this.videoElement, 0, 0, videoWidth, videoHeight);
         return this.canvasElement.toDataURL('image/jpeg', 0.8);
+    }
+
+    shutdown() {
+        this.faceMeshManager.stop();
     }
 }
