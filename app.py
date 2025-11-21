@@ -46,7 +46,7 @@ CORS(app,
 
 @app.route('/')
 def menu():
-    return redirect("http://127.0.0.1:5173/dashboard", code=302)
+    return redirect("https://dashboard.cloudsup.id", code=302)
 
 @app.route('/tangkap-game')
 def tangkap_game():
