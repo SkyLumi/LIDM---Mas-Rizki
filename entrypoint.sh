@@ -9,4 +9,7 @@ echo "Database started"
 
 flask create-tables
 
+echo "Attempting to insert data from data.sql..."
+psql "$DATABASE_URL" -f /app/data.sql
+
 exec "$@"

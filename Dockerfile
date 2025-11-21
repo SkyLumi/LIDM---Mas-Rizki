@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     build-essential \
     netcat-openbsd \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
@@ -24,6 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY app.py api_analytics.py api_auth.py api_master.py extensions.py models.py ./
+COPY data.sql ./
 COPY static/ static/
 COPY templates/ templates/
 
