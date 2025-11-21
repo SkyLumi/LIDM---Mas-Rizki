@@ -3,21 +3,37 @@ version: '3.8'
 services:
   web:
     build: .
-    container_name: flask-game-app
+    container_name: cloudsup
     ports:
       - "5000:5000"
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
+      - DATABASE_URL=postgresql://admin:admin123@db:5432/cloudsup
+    depends_on:
+      - db 
     restart: unless-stopped
-    # Uncomment the volumes section below for development mode (hot reload)
-    # volumes:
-    #   - ./app.py:/app/app.py
-    #   - ./static:/app/static
-    #   - ./templates:/app/templates
+    networks:
+      - app-network
+
+  db:
+    image: postgres:17
+    container_name: cloudsup-pgsql
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=cloudsup
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin123
+    restart: unless-stopped
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  postgres_data:

@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 
-    'postgresql://postgres:123@localhost:5432/cloudsup' # (Ganti ini)
+    'postgresql://postgres:123@localhost:5432/cloudsup'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'ayang_geprek_bu_deka_enak_dan_lezat_bisa_beli_di_jember_teman_teman')
@@ -63,6 +63,13 @@ def papan_game():
 @app.route('/kartu-game')
 def kartu_game():
     return render_template('kartu.jinja')
+
+@app.cli.command("create-tables")
+def create_tables():
+    """Create all database tables."""
+    with app.app_context():
+        db.create_all()
+    print("Database tables created.")
 
 # -----------------------------------------------------------------
 # (Kode buat 'jalanin' server)
