@@ -1,4 +1,5 @@
 import FaceMeshManager from './faceMeshManager.js';
+import { API_BASE_URL }  from '../../config.js';
 
 export class MainMenu extends Phaser.Scene {
     constructor() {
@@ -219,7 +220,7 @@ export class MainMenu extends Phaser.Scene {
         }
         
         try {
-            const response = await fetch('http://127.0.0.1:5000/v1/login-wajah', {
+            const response = await fetch(`${API_BASE_URL}/v1/login-wajah`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image_base64: imageBase64 })
@@ -234,7 +235,8 @@ export class MainMenu extends Phaser.Scene {
         
             // --- LOGIN SUKSES ---
             this.loginState = 'LOGGED_IN';
-            this.currentMuridId = result.murid.id_murid;
+            this.registry.set('currentMuridId', result.murid.id_murid);
+            this.registry.set('currentMuridNama', result.murid.nama);
             
             // Update UI
             this.welcomeText.setText(`Halo, ${result.murid.nama}!`);

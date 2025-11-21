@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../../config.js';
+
 export class Result extends Phaser.Scene {
     constructor() {
         super('Result')
@@ -135,8 +137,33 @@ export class Result extends Phaser.Scene {
         });
 
         const nextLevelButton = this.add.image(200, 0, 'panelNextLevel')
-            .setInteractive()
-            .setScale(3)
+        if (this.win) {
+            // Kalo MENANG: Tombol Aktif & Terang
+            nextLevelButton.setInteractive();
+            nextLevelButton.clearTint();
+            nextLevelButton.setScale(3)
+            
+            nextLevelButton.on('pointerdown', () => {
+                const nextLevel = this.levelMap[this.gameSceneKey]
+                
+                if (nextLevel === 'MainMenu') {
+                    // Kalo udah tamat (Level 3), balik ke menu
+                    this.scene.stop()
+                    this.scene.stop(this.gameSceneKey)
+                    this.scene.start('MainMenu')
+                } else {
+                    // Lanjut level berikutnya
+                    this.scene.stop()
+                    this.scene.stop(this.gameSceneKey)
+                    this.scene.start(nextLevel)
+                }
+            });
+        } else {
+            // Kalo KALAH: Tombol Mati & Gelap
+            nextLevelButton.disableInteractive();
+            nextLevelButton.setTint(0x555555); 
+            nextLevelButton.setScale(3)
+        }
 
         nextLevelButton.on('pointerdown', () => {
             const nextLevel = this.levelMap[this.gameSceneKey]
@@ -159,7 +186,7 @@ export class Result extends Phaser.Scene {
     }
 
     async sendAnalyticsToAPI(data) {
-        const apiEndpoint = 'http://127.0.0.1:5000/analytics/save'; 
+        const apiEndpoint = `${API_BASE_URL}/v1/analytics/save`; 
 
         console.log('Mengirim data ke API:', data);
 

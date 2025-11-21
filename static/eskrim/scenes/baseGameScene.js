@@ -55,6 +55,7 @@ export class BaseGameScene extends Phaser.Scene {
 
         // this.gameTimeRemaining = 80;
         this.score = 0;
+        this.scoop = 0;
         this.maxLives = 3;
         this.currentLives = this.maxLives;
         this.lifeIcons = [];
@@ -259,11 +260,18 @@ export class BaseGameScene extends Phaser.Scene {
         cream.setVelocityY(300) 
         cream.setVelocityX(velocityX);
         cream.play('iceCreamFall_anim')
+        cream.spawnTime = this.time.now;
     }
 
     handleCatch(cone, cream) {
         const catchX = cream.x;
         const catchY = cream.y;
+
+        if (cream.spawnTime) {
+            const reactionTime = this.time.now - cream.spawnTime;
+            this.analytics.reactionTimes.push(reactionTime);
+            console.log(`Waktu Reaksi: ${reactionTime}ms`);
+        }
 
         this.analytics.tcr_success++
         this.scoop += 1
@@ -396,7 +404,15 @@ export class BaseGameScene extends Phaser.Scene {
     endGame(isWin) {
         if (this.gameOver) return
         this.gameOver = true
+        this.gameTimer.paused = true
+        this.spawnTimer.paused = true
 
+        if (this.score < 600) {
+            isWin = false;
+        } else {
+            isWin = true;
+        }
+        
         // --- 1. Hitung Semua Skor Analisis ---
         const totalPlayTimeMs = this.time.now - this.analytics.gameStartTime;
         
@@ -406,16 +422,24 @@ export class BaseGameScene extends Phaser.Scene {
         // Rumus Skor Koordinasi (UI: 55.4 Points)
         const skorKoordinasi = (this.analytics.tcr_total > 0) ? (this.analytics.tcr_success / this.analytics.tcr_total) * 100 : 0;
 
+        let avgReactionTime = 0;
+        if (this.analytics.reactionTimes.length > 0) {
+            const totalReaction = this.analytics.reactionTimes.reduce((a, b) => a + b, 0);
+            avgReactionTime = totalReaction / this.analytics.reactionTimes.length;
+        }
+
         // --- 2. Buat "Bungkusan" Data ---
         const analyticsReport = {
-            userId: "id_anak_abk_123", // (Nanti Abang ganti)
+            id_profil: this.registry.get('currentMuridId'),
+            id_games_dashboard: 2,
             level: this.scene.key,
             finalScore: this.score,
+            win: isWin,
             totalPlayTimeSeconds: totalPlayTimeMs / 1000,
             metrics: {
-                fokus: skorFokus.toFixed(1), // (Hasilnya 90.6)
-                koordinasi: skorKoordinasi.toFixed(1), // (Hasilnya 55.4)
-                // (Nanti kita isi WaktuReaksi, dll dari game lain)
+                fokus: skorFokus.toFixed(1),
+                koordinasi: skorKoordinasi.toFixed(1),
+                waktuReaksi: avgReactionTime.toFixed(0)
             },
             rawHeatmap: this.analytics.heatmapData // Data mentah (x,y,t)
         };
@@ -543,5 +567,6 @@ export class BaseGameScene extends Phaser.Scene {
             this.gameBGM.stop();
             this.gameBGM = null;
         }
+
     }
 }

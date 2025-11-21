@@ -27,16 +27,16 @@ def save_analytics():
     # --- Data Sesi (Buat tabel "Game_aktual") ---
     # (PENTING: Pastiin 3 data ini dikirim dari game Abang)
     id_profil_murid = data.get('id_profil') 
-    id_game = data.get('id_games_dashboard') # (Misal: 1, 2, 3)
-    level_key = data.get('level') # (Misal: "Level1")
+    id_game = data.get('id_games_dashboard')
+    level_raw = data.get('level')
+    angka_saja = ''.join(filter(str.isdigit, level_raw))
+    level_key = int(angka_saja)
     
     skor = data.get('finalScore')
     durasi = data.get('totalPlayTimeSeconds')
-    is_win = data.get('win') # (true/false)
+    is_win = data.get('win')
 
-    # --- Data Laporan (Buah tabel "Laporan") ---
-    # (Ini "Bungkusan" metrics yang Abang bilang)
-    metrics = data.get('metrics', {}) # (Default-nya "ember" kosong)
+    metrics = data.get('metrics', {})
     
     # --- INI "JURUS JAGO"-NYA (Pake .get()) ---
     # (Kalo game "Kartu" gak ngirim 'koordinasi', ini otomatis jadi 'None')
@@ -67,7 +67,6 @@ def save_analytics():
         
     # 5. Simpen ke DB (Pake "Jurus Jago" Transaction)
     try:
-        # --- LANGKAH A: Bikin Sesi (GameAktual) ---
         new_sesi = GameAktual(
             id_profil=id_profil_murid,
             id_games_dashboard=id_game,
@@ -75,7 +74,6 @@ def save_analytics():
             skor=skor,
             waktu_durasi_detik=int(durasi),
             is_win=is_win
-            # 'waktu_main' otomatis diisi PostgreSQL
         )
         db.session.add(new_sesi)
         db.session.commit() # Commit biar dapet "id_sesi" baru
@@ -83,9 +81,6 @@ def save_analytics():
         # --- LANGKAH B: Bikin Laporan (Laporan) ---
         new_laporan = Laporan(
             id_sesi=new_sesi.id_sesi, # <-- "Kunci" penghubung
-            
-            # (Ini 100% AMAN, kalo "Kartu" gak ngirim 'koordinasi',
-            #  'koordinasi_score' isinya 'None', dan DB nerima 'NULL')
             fokus=fokus_score,
             koordinasi=koordinasi_score,
             waktu_reaksi=reaksi_score,
@@ -280,3 +275,113 @@ def get_laporan_detail(id_laporan):
     except Exception as e:
         print(f"Error get laporan detail: {e}")
         return jsonify({"status": "gagal", "message": "Terjadi kesalahan server"}), 500
+    
+@analytics_bp.route('/analytics/history/<int:id_profil>', methods=['GET'])
+@guru_required
+def get_game_history(id_profil):
+    """
+    API (HANYA GURU) untuk data chart 'Riwayat Penggunaan Game'.
+    Mengembalikan:
+    1. Total Game Played (per Game)
+    2. Total Play Time (per Game)
+    3. Heatmap Data (5 minggu terakhir)
+    """
+    try:
+        # --- 1. CEK KEAMANAN (Sama kayak yang lain) ---
+        # (Copas aja logic cek guru_id vs profil_id_sekolah dari fungsi lain)
+        
+        # --- 2. AMBIL DATA TOTAL PER GAME (Bar Chart) ---
+        # (Hitung berapa kali main & total durasi per game)
+        stmt_total = (
+            db.select(
+                GamesDashboard.nama_game,
+                func.count(GameAktual.id_sesi).label('total_main'),
+                func.sum(GameAktual.waktu_durasi_detik).label('total_durasi')
+            )
+            .join(GameAktual, GamesDashboard.id_games_dashboard == GameAktual.id_games_dashboard)
+            .where(GameAktual.id_profil == id_profil)
+            .group_by(GamesDashboard.nama_game)
+        )
+        results_total = db.session.execute(stmt_total).all()
+
+        games_stats = {}
+        for row in results_total:
+            nama_game = row[0].upper() # Biar konsisten uppercase
+            games_stats[nama_game] = {
+                'count': row[1],
+                'duration_minutes': round(row[2] / 60) if row[2] else 0
+            }
+
+        # --- 3. AMBIL DATA HEATMAP (5 MINGGU TERAKHIR) ---
+        # Kita butuh data harian: (Tanggal, Jumlah Main, Total Durasi)
+        
+        # Tentukan Range Tanggal (Hari ini - 35 hari)
+        today = datetime.date.today()
+        start_date = today - datetime.timedelta(days=34) # 5 minggu * 7 hari - 1
+
+        stmt_daily = (
+            db.select(
+                func.date(GameAktual.waktu_main).label('tanggal'),
+                func.count(GameAktual.id_sesi).label('daily_count'),
+                func.sum(GameAktual.waktu_durasi_detik).label('daily_duration')
+            )
+            .where(GameAktual.id_profil == id_profil)
+            .where(func.date(GameAktual.waktu_main) >= start_date)
+            .group_by(func.date(GameAktual.waktu_main))
+        )
+        results_daily = db.session.execute(stmt_daily).all()
+
+        # Ubah ke Dictionary biar gampang diakses: {'2023-11-20': {'count': 5, 'dur': 100}, ...}
+        daily_map = {}
+        for row in results_daily:
+            tgl_str = row[0].isoformat() # YYYY-MM-DD
+            daily_map[tgl_str] = {
+                'count': row[1],
+                'duration_minutes': round(row[2] / 60) if row[2] else 0
+            }
+
+        # --- 4. FORMATTING HEATMAP ARRAY (5x7 GRID) ---
+        # Kita harus isi grid 5 minggu x 7 hari. Kalau tanggal gada data, isi 0.
+        
+        heatmap_games = []
+        heatmap_time = []
+        weeks_label = []
+
+        # Loop 5 minggu ke belakang (Mulai dari yang paling lama)
+        current_day_pointer = start_date
+        
+        for week_idx in range(5):
+            week_row_games = []
+            week_row_time = []
+            
+            # Label Minggu (Misal: "Minggu 28")
+            # Kita pake ISO week number aja biar gampang
+            iso_week = current_day_pointer.isocalendar()[1]
+            weeks_label.append(f"Minggu {iso_week}")
+
+            for day_idx in range(7):
+                tgl_str = current_day_pointer.isoformat()
+                data_hari = daily_map.get(tgl_str, {'count': 0, 'duration_minutes': 0})
+                
+                week_row_games.append(data_hari['count'])
+                week_row_time.append(data_hari['duration_minutes'])
+                
+                current_day_pointer += datetime.timedelta(days=1) # Lanjut besoknya
+            
+            heatmap_games.append(week_row_games)
+            heatmap_time.append(week_row_time)
+
+        # --- 5. FINAL JSON RESPONSE ---
+        return jsonify({
+            "status": "sukses",
+            "games_stats": games_stats, # Data Bar Chart
+            "heatmap": {
+                "games": heatmap_games, # Data Grid Game
+                "time": heatmap_time,   # Data Grid Waktu
+                "weeks": weeks_label    # Label Y-Axis
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Error get history: {e}")
+        return jsonify({"status": "gagal", "message": "Server error"}), 500
