@@ -60,8 +60,8 @@ export class Game extends Phaser.Scene {
             this.baseSpeed = 1.0;
       }
 
-      this.starThresholds.one = this.maxScore * 0.6
-      this.starThresholds.two = this.maxScore * 0.8
+      this.starThresholds.one = 800
+      this.starThresholds.two = 1400
    }
 
    create() {
@@ -103,7 +103,7 @@ export class Game extends Phaser.Scene {
          totalFrames: 0,   // Total frame game
          handLossFrames: 0, // Total frame waktu tangan hilang
          heatmapData: [],   // nampung data heatmap (x, y, t)
-         reactionTimes: []  // (Waktu Reaksi) Buat game Gelembung
+         reactionTimes: []
       };
 
       //    Bubble Group      //
@@ -245,6 +245,7 @@ export class Game extends Phaser.Scene {
 
    updateScoreUI() {
       if (this.score < 0) this.score = 0;
+      
       const poppedBubbleCount = this.analytics.reactionTimes.length;
       this.scoreText.setText(poppedBubbleCount.toString().padStart(2, '0'));
 
@@ -252,27 +253,31 @@ export class Game extends Phaser.Scene {
          
          const star1_VisualY = 0.5;
          const star2_VisualY = 0.7;
-         const star3_VisualY = 1.0;
-
-         const scorePercent = this.score / this.maxScore;
          
-         const star1_Score = this.starThresholds.one / this.maxScore;
-         const star2_Score = this.starThresholds.two / this.maxScore;
+         const slowZoneVisualCap = 0.80; 
+
+         const scoreStar1 = 800;
+         const scoreStar2 = 1400;
+         const scoreJump  = 2000;
+         const scoreMax   = 2000;
 
          let visualPercentage = 0;
          let t = 0;
 
-         if (scorePercent <= star1_Score) {
-            t = scorePercent / star1_Score;
+         if (this.score >= scoreJump) {
+            visualPercentage = 1.0; 
+         } 
+         else if (this.score <= scoreStar1) {
+            t = this.score / scoreStar1;
             visualPercentage = Phaser.Math.Linear(0, star1_VisualY, t);
-         
-         } else if (scorePercent <= star2_Score) {
-            t = (scorePercent - star1_Score) / (star2_Score - star1_Score);
+         }
+         else if (this.score <= scoreStar2) {
+            t = (this.score - scoreStar1) / (scoreStar2 - scoreStar1);
             visualPercentage = Phaser.Math.Linear(star1_VisualY, star2_VisualY, t);
-         
-         } else {
-            t = (scorePercent - star2_Score) / (1.0 - star2_Score);
-            visualPercentage = Phaser.Math.Linear(star2_VisualY, star3_VisualY, t);
+         }
+         else {
+            t = (this.score - scoreStar2) / (scoreJump - scoreStar2);
+            visualPercentage = Phaser.Math.Linear(star2_VisualY, slowZoneVisualCap, t);
          }
          
          visualPercentage = Phaser.Math.Clamp(visualPercentage, 0, 1);
@@ -652,7 +657,7 @@ export class Game extends Phaser.Scene {
 
       if (results.multiHandLandmarks && results.multiHandedness) {
          
-         const timestamp = this.time.now - this.analytics.gameStartTime;nmbjnm,
+         const timestamp = this.time.now - this.analytics.gameStartTime;
 
          results.multiHandLandmarks.forEach((landmarks, i) => {
             
