@@ -1,118 +1,118 @@
+import { API_BASE_URL } from '../../config.js';
+
 export class LevelMenu extends Phaser.Scene {
    constructor(){
       super('LevelMenu')
    }
 
-   create() {
+   async create() {
       const { width, height } = this.sys.game.config
 
       let screenCenterX = width / 2
       let screenCenterY = height / 2
 
-      const highestLevelUnlocked = this.registry.get('highestLevelUnlocked'); 
-
-      this.add.image(screenCenterX, screenCenterY, 'levelmenu')
-      .setScale(0.75)
-
-      this.add.image(screenCenterX, screenCenterY, 'levelBox')
-      .setScale(0.37)
+      this.add.image(screenCenterX, screenCenterY, 'levelmenu').setScale(0.75)
+      this.add.image(screenCenterX, screenCenterY, 'levelBox').setScale(0.37)
 
       const closeButton = this.add.image(
          screenCenterX + 330, 
          screenCenterY - 330, 
          'closeButton'
-      )
-      .setScale(0.35)
-      .setInteractive()
-      
+      ).setScale(0.35).setInteractive()
+
       const buttonContainer = this.add.container(screenCenterX, screenCenterY -60)
 
-      const level1Btn = this.add.image(-190, 0, 'level1Unselected')
-         .setScale(0.4)
-         .setInteractive();
-      this.addLevelButtonEvents(level1Btn, 1, 'level1Unselected', 'level1Selected');
-
-
-      let level2Texture = (highestLevelUnlocked >= 2) ? 'level2Unselected' : 'levelLock';
-      const level2Btn = this.add.image(0, 0, level2Texture)
-         .setScale(0.4);
+      this.btnLevel1 = this.add.image(-190, 0, 'level1Unselected').setScale(0.4);
       
-      if (highestLevelUnlocked >= 2) {
-         level2Btn.setInteractive();
-         this.addLevelButtonEvents(level2Btn, 2, 'level2Unselected', 'level2Selected');
-      }
+      this.btnLevel2 = this.add.image(0, 0, 'levelLock').setScale(0.4);
+      this.btnLevel3 = this.add.image(190, 0, 'levelLock').setScale(0.4);
 
-      let level3Texture = (highestLevelUnlocked >= 3) ? 'level3Unselected' : 'levelLock';
-      const level3Btn = this.add.image(190, 0, level3Texture)
-         .setScale(0.4);
-
-      if (highestLevelUnlocked >= 3) {
-         level3Btn.setInteractive();
-         this.addLevelButtonEvents(level3Btn, 3, 'level3Unselected', 'level3Selected');
-      }
-      
-      buttonContainer.add([
-         level1Btn, 
-         level2Btn,
-         level3Btn
-      ])
+      buttonContainer.add([this.btnLevel1, this.btnLevel2, this.btnLevel3])
 
       const normalScale = 0.35
       const hoverScale = 0.4
       const tweenDuration = 100;
 
       closeButton.on('pointerover', () => {
-         this.tweens.add({
-            targets: closeButton,
-            scale: hoverScale,
-            duration: tweenDuration,
-            ease: 'Power1'
-         })
-         if (this.registry.get('isSfxOn') === true) {
-            this.sound.play('sfxMenuButtonHover')
-         }
+         this.tweens.add({ targets: closeButton, scale: hoverScale, duration: tweenDuration, ease: 'Power1' })
+         if (this.registry.get('isSfxOn') === true) this.sound.play('sfxMenuButtonHover')
       })
 
       closeButton.on('pointerout', () => {
-         this.tweens.add({
-            targets: closeButton,
-            scale: normalScale,
-            duration: tweenDuration,
-            ease: 'Power1'
-         })
+         this.tweens.add({ targets: closeButton, scale: normalScale, duration: tweenDuration, ease: 'Power1' })
       })
 
       closeButton.on('pointerdown', () => {
-         if (this.registry.get('isSfxOn') === true) {
-            this.sound.play('sfxMenuButtonClick')
-         }
+         if (this.registry.get('isSfxOn') === true) this.sound.play('sfxMenuButtonClick')
          this.scene.start('MainMenu')
       });
-      
+
+      const idProfil = this.registry.get('currentMuridId');
+      const namaGame = "GELEMBUNG";
+
+      if (!idProfil) {
+          console.error("ID Profil tidak ditemukan, menggunakan default unlock.");
+          this.setupLevelButton(this.btnLevel1, { is_unlocked: true }, 1);
+          return;
+      }
+
+      try {
+          const response = await fetch(`${API_BASE_URL}/v1/game/status?id_profil=${idProfil}&nama_game=${namaGame}`);
+          const result = await response.json();
+
+          if (result.status === 'sukses') {
+              const progress = result.data.progress;
+              
+              console.log("Progress Gelembung:", progress);
+
+              this.setupLevelButton(this.btnLevel1, progress.level1, 1);
+              this.setupLevelButton(this.btnLevel2, progress.level2, 2);
+              this.setupLevelButton(this.btnLevel3, progress.level3, 3);
+          }
+      } catch (error) {
+          console.error("Gagal mengambil data level:", error);
+          this.setupLevelButton(this.btnLevel1, { is_unlocked: true }, 1);
+      }
    }
 
-   addLevelButtonEvents(button, levelNumber, unselectedTexture, selectedTexture) {
-      
-      button.on('pointerover', () => {
-         if (this.registry.get('isSfxOn') === true) {
-            this.sound.play('sfxLevelButtonHover');
-         }
-         button.setTexture(selectedTexture);
-      });
+   setupLevelButton(button, levelData, levelNumber) {
+      const unselectedTexture = `level${levelNumber}Unselected`;
+      const selectedTexture = `level${levelNumber}Selected`;
 
-      button.on('pointerout', () => {
+      if (levelData && levelData.is_unlocked) {
          button.setTexture(unselectedTexture);
-      });
+         
+         button.setInteractive({ useHandCursor: true });
+         button.clearTint();
 
-      button.on('pointerdown', () => {
-         if (this.registry.get('isSfxOn') === true) {
-            this.sound.play('sfxLevelButtonClick');
-         }
-         this.selectLevel(levelNumber);
-      });
+         button.on('pointerover', () => {
+            if (this.registry.get('isSfxOn') === true) {
+               this.sound.play('sfxLevelButtonHover');
+            }
+            button.setTexture(selectedTexture);
+            button.setScale(0.45);
+         });
+
+         button.on('pointerout', () => {
+            button.setTexture(unselectedTexture);
+            button.setScale(0.4);
+         });
+
+         button.on('pointerdown', () => {
+            if (this.registry.get('isSfxOn') === true) {
+               this.sound.play('sfxLevelButtonClick');
+            }
+            this.selectLevel(levelNumber);
+         });
+
+      } else {
+         button.setTexture('levelLock');
+         button.disableInteractive();
+         button.setScale(0.4);
+      }
    }
 
    selectLevel(levelNumber) {
-      this.scene.start('Game', {level: levelNumber})
+      this.scene.start('Game', { level: levelNumber })
    }
 }
