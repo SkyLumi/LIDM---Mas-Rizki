@@ -37,7 +37,7 @@ app.register_blueprint(game_bp, url_prefix='/v1')
 
 CORS(app, 
      supports_credentials=True, 
-     resources={r"/*": {"origins": ["https://dashboard.cloudsup.id", "http://127.0.0.1:5173"]}}
+     resources={r"/*": {"origins": ["https://dashboard.cloudsup.id", "http://127.0.0.1:5173", "http://127.0.0.1:5000"]}}
 )
 
 # -----------------------------------------------------------------

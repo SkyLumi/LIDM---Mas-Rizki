@@ -1,4 +1,6 @@
 node_modules
 venv
 face_recognition_models
+face_recognition
 __pycache__
+.vscode
