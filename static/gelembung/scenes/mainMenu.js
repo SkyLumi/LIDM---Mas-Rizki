@@ -1,4 +1,5 @@
 import FaceMeshManager from './faceMeshManager.js';
+import { API_BASE_URL }  from '../../config.js';
 
 export class MainMenu extends Phaser.Scene {
    constructor() {
@@ -8,6 +9,14 @@ export class MainMenu extends Phaser.Scene {
       this.settingsContainer = null;
       this.isMusicOn = true; 
       this.isSfxOn = true;
+
+      // --- VARIABEL AUTH ---
+      this.videoElement = null;
+      this.canvasElement = null;
+      this.currentMuridId = null;
+      this.loginState = 'SEARCHING'; // SEARCHING, LOGGING_IN, LOGGED_IN, FAILED
+      this.faceLostCounter = 0;
+      this.FACE_LOST_THRESHOLD = 120;
    }
 
    create() {
@@ -16,6 +25,7 @@ export class MainMenu extends Phaser.Scene {
         const screenCenterX = width / 2
         const screenCenterY = height / 2
 
+        // --- SETUP REGISTRY AUDIO ---
         if (this.registry.get('isMusicOn') === undefined) {
             this.registry.set('isMusicOn', true);
             this.registry.set('isSfxOn', true);
@@ -41,15 +51,9 @@ export class MainMenu extends Phaser.Scene {
         let bgMainMenu = this.registry.get('bgMainMenu')
 
         if (!bgMainMenu || !bgMainMenu.isPlaying) {
-            
-            if (bgMainMenu) {
-                bgMainMenu.stop();
-            }
+            if (bgMainMenu) { bgMainMenu.stop(); }
 
-            bgMainMenu = this.sound.add('bgMainMenu', { 
-                loop: true, 
-                volume: 0.5
-            });
+            bgMainMenu = this.sound.add('bgMainMenu', { loop: true, volume: 0.5 });
             
             if (bgMainMenu) {
                 this.registry.set('bgMainMenu', bgMainMenu);
@@ -66,11 +70,15 @@ export class MainMenu extends Phaser.Scene {
         //    Title Box   //
         this.add.image(960, 480, 'titleBox')
 
-        //    Button      //
+        //    Button Container   //
         const buttonContainer = this.add.container(screenCenterX, screenCenterY + 120)
-        const playButton = this.add.image(-460,0,'playButton')
+        
+        // --- TOMBOL PLAY (MATI SAAT AWAL) ---
+        this.playButton = this.add.image(-460,0,'playButton')
             .setScale(0.75)
-            .setInteractive()
+            .setTint(0x555555) // Gelap (Terkunci)
+            .disableInteractive(); // Tidak bisa diklik
+
         const settingButton = this.add.image(0,0,'settingButton')
             .setScale(0.75)
             .setInteractive()
@@ -79,100 +87,68 @@ export class MainMenu extends Phaser.Scene {
             .setScale(0.75)
             .setInteractive()
 
-        buttonContainer.add([playButton, settingButton, quitButton])
+        buttonContainer.add([this.playButton, settingButton, quitButton])
 
         //    Button Hover Interaction    //
         const normalScale = 0.75
         const hoverScale = 0.80
         const tweenDuration = 100
 
-        playButton.on('pointerover', () => {
+        // Animasi Hover PlayButton (Hanya jalan kalau sudah aktif nanti)
+        this.playButton.on('pointerover', () => {
             this.tweens.add({
-                targets: playButton,
+                targets: this.playButton,
                 scale: hoverScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
-
-            if (this.isSfxOn) {
-                this.sound.play('sfxMenuButtonHover')
-            }
+            if (this.isSfxOn) this.sound.play('sfxMenuButtonHover');
         });
 
-        playButton.on('pointerout', () => {
+        this.playButton.on('pointerout', () => {
             this.tweens.add({
-                targets: playButton,
+                targets: this.playButton,
                 scale: normalScale,
                 duration: tweenDuration,
                 ease: 'Power1'
             });
         });
 
-        settingButton.on('pointerover', () => {
-            this.tweens.add({
-                targets: settingButton,
-                scale: hoverScale,
-                duration: tweenDuration,
-                ease: 'Power1'
-            });
+        this.playButton.on('pointerdown', () => {
+            if (this.isSfxOn) this.sound.play('sfxPlayButton');
+            this.scene.start('LevelMenu')
+        })
 
-            if (this.isSfxOn) {
-                this.sound.play('sfxMenuButtonHover')
-            }
+        // Setting & Quit Logic
+        settingButton.on('pointerover', () => {
+            this.tweens.add({ targets: settingButton, scale: hoverScale, duration: tweenDuration, ease: 'Power1' });
+            if (this.isSfxOn) this.sound.play('sfxMenuButtonHover');
         });
 
         settingButton.on('pointerout', () => {
-            this.tweens.add({
-                targets: settingButton,
-                scale: normalScale,
-                duration: tweenDuration,
-                ease: 'Power1'
-            });
+            this.tweens.add({ targets: settingButton, scale: normalScale, duration: tweenDuration, ease: 'Power1' });
         });
 
         quitButton.on('pointerover', () => {
-            this.tweens.add({
-                targets: quitButton,
-                scale: hoverScale,
-                duration: tweenDuration,
-                ease: 'Power1'
-            });
-
-            if (this.isSfxOn) {
-                this.sound.play('sfxMenuButtonHover')
-            }
+            this.tweens.add({ targets: quitButton, scale: hoverScale, duration: tweenDuration, ease: 'Power1' });
+            if (this.isSfxOn) this.sound.play('sfxMenuButtonHover');
         });
 
         quitButton.on('pointerout', () => {
-            this.tweens.add({
-                targets: quitButton,
-                scale: normalScale,
-                duration: tweenDuration,
-                ease: 'Power1'
-            });
+            this.tweens.add({ targets: quitButton, scale: normalScale, duration: tweenDuration, ease: 'Power1' });
         });
 
-        playButton.on('pointerdown', () => {
-            this.scene.start('LevelMenu')
-            if (this.isSfxOn) {
-                this.sound.play('sfxPlayButton')
-            }
-        })
-
         settingButton.on('pointerdown', () => {
-            if (this.isSfxOn) {
-                this.sound.play('sfxMenuButtonClick')
-            }
+            if (this.isSfxOn) this.sound.play('sfxMenuButtonClick');
             this.showSettingsPanel()
         })
 
         quitButton.on('pointerdown', () => {
-            if (this.isSfxOn) {
-                this.sound.play('sfxMenuButtonClick')
-            }
+            if (this.isSfxOn) this.sound.play('sfxMenuButtonClick');
             window.location.href = 'https://cloudsuptest.framer.website/dashboard';
         })
 
+        // --- TEXT UI ---
         this.welcomeText = this.add.text(width / 2, 100, 'Selamat Datang!', {
             fontSize: '48px', fill: '#fff'
         }).setOrigin(0.5);
@@ -181,26 +157,176 @@ export class MainMenu extends Phaser.Scene {
             fontSize: '24px', fill: '#ffff00'
         }).setOrigin(0.5);
 
-        // --- 3. Tombol "Daftar" (Gak berubah) ---
-        const registerButton = this.add.text(width / 2, height - 100, 'Daftar Wajah Baru <<', {
-            fontSize: '24px', fill: '#aaa'
-        }).setOrigin(0.5).setInteractive();
-        
-        registerButton.on('pointerdown', () => {
-            this.faceMeshManager.stop();
-            this.scene.start('RegisterFace');
-        });
+        // --- (TOMBOL DAFTAR SUDAH DIHAPUS) ---
 
-        // --- 4. Inisialisasi Face Mesh (Pake Manager) ---
+        // --- INISIALISASI FACE MESH ---
         this.videoElement = document.getElementById('webcam');
         this.canvasElement = document.getElementById('snapshotCanvas');
         this.faceMeshManager = new FaceMeshManager(this.videoElement, this.onFaceResults.bind(this));
+        
+        this.events.once('shutdown', this.shutdown, this);
    }
 
+    // --- LOGIKA PENCARIAN WAJAH (CONTINUOUS LOOP) ---
+    onFaceResults(results) {
+        if (!this.sys || !this.sys.settings.active) return;
+
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            // --- WAJAH KEDETEK ---
+            this.faceLostCounter = 0;
+            
+            // Loop Pencarian: Jika masih SEARCHING atau FAILED (belum sukses), coba terus
+            if (this.loginState === 'SEARCHING' || this.loginState === 'FAILED') {
+                const landmarks = results.multiFaceLandmarks[0];
+                const currentPose = this.calculateFaceYaw(landmarks);
+
+                if (currentPose === 'depan') {
+                    // Kunci state supaya tidak spam API berkali-kali dalam satu waktu
+                    this.loginState = 'LOGGING_IN'; 
+                    this.attemptLogin(); 
+                } else {
+                    this.infoText.setText('Posisikan wajah lurus ke DEPAN...');
+                    this.infoText.setColor('#ffff00');
+                }
+            }
+            
+        } else {
+            // --- WAJAH GAK KEDETEK ---
+            
+            // Jika sudah login tapi wajah hilang, logout (security)
+            if (this.loginState === 'LOGGED_IN') {
+                this.handleLogout();
+            }
+
+            // Fitur Hard Reset (jika kamera freeze/stuck)
+            if ((this.loginState === 'SEARCHING' || this.loginState === 'FAILED') 
+                && this.faceLostCounter > this.FACE_LOST_THRESHOLD) 
+            {
+                console.warn("Wajah 'stuck'. Melakukan Hard Reset MediaPipe...");
+                this.faceLostCounter = 0;
+                this.faceMeshManager.stop();
+                this.faceMeshManager = new FaceMeshManager(this.videoElement, this.onFaceResults.bind(this));
+                this.infoText.setText('Kamera di-reset. Mencari wajah...');
+            }
+            
+            this.faceLostCounter++;
+        }
+    }
+
+    // --- FUNGSI LOGIN KE API ---
+    async attemptLogin() {
+        this.infoText.setText('Mencocokkan wajah...');
+        this.infoText.setColor('#ffff00');
+        
+        const imageBase64 = this.takeSnapshot();
+        if (!imageBase64 || imageBase64 === 'data:,') {
+            this.infoText.setText('Gagal ambil foto. Coba lagi.');
+            this.loginState = 'SEARCHING'; // Kembalikan ke mode cari agar loop berlanjut
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/v1/login-wajah`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_base64: imageBase64 })
+            });
+        
+            const result = await response.json();
+        
+            if (!response.ok) {
+                throw new Error(result.message || "Gagal Login"); 
+            }
+        
+            // --- LOGIN SUKSES ---
+            this.loginState = 'LOGGED_IN';
+            
+            this.registry.set('currentMuridId', result.murid.id_murid);
+            this.registry.set('currentMuridNama', result.murid.nama);
+            
+            this.welcomeText.setText(`Halo, ${result.murid.nama}!`);
+            this.infoText.setText('Login sukses. Silakan mulai.');
+            this.infoText.setColor('#00ff00');
+
+            // NYALAKAN TOMBOL PLAY
+            if (this.playButton) {
+                this.playButton.clearTint(); // Jadi terang
+                this.playButton.setInteractive(); // Bisa diklik
+                
+                this.tweens.add({
+                    targets: this.playButton,
+                    scale: { from: 0.75, to: 0.9 },
+                    duration: 200,
+                    yoyo: true,
+                    onComplete: () => this.playButton.setScale(0.75)
+                });
+            }
+        
+        } catch (error) {
+            // --- LOGIN GAGAL ---
+            // Set status ke FAILED, nanti 'onFaceResults' akan mendeteksi ini 
+            // dan mencoba login lagi di frame berikutnya jika wajah masih ada.
+            this.loginState = 'FAILED';
+            this.infoText.setText(error.message); 
+            this.infoText.setColor('#ff0000');
+            console.error("Login Error:", error);
+
+            // Pastikan tombol mati
+            if (this.playButton) {
+                this.playButton.setTint(0x555555);
+                this.playButton.disableInteractive();
+            }
+        }
+    }
+
+    // --- LOGOUT / RESET ---
+    handleLogout() {
+        if (!this.welcomeText || !this.welcomeText.active) return; 
+
+        console.log("LOGOUT: Wajah hilang, reset ke 'SEARCHING'.");
+        this.loginState = 'SEARCHING';
+        this.currentMuridId = null;
+        
+        this.welcomeText.setText('Selamat Datang!');
+        this.infoText.setText('Mencari wajah...');
+        this.infoText.setColor('#ffff00');
+
+        // Matikan tombol Play
+        if (this.playButton) {
+            this.playButton.setTint(0x555555);
+            this.playButton.disableInteractive();
+        }
+    }
+
+    calculateFaceYaw(landmarks) {
+        const zLeft = landmarks[234].z;
+        const zRight = landmarks[454].z;
+        const zDiff = zLeft - zRight;
+        const YAW_THRESHOLD = 0.04;
+        
+        if (zDiff > YAW_THRESHOLD) return 'kanan'; 
+        else if (zDiff < -YAW_THRESHOLD) return 'kiri';
+        else return 'depan';
+    }
+    
+    takeSnapshot() {
+        if (!this.videoElement || this.videoElement.readyState < 3 || this.videoElement.videoWidth === 0) {
+            return null;
+        }
+        const ctx = this.canvasElement.getContext('2d');
+        const videoWidth = this.videoElement.videoWidth;
+        const videoHeight = this.videoElement.videoHeight;
+        this.canvasElement.width = videoWidth;
+        this.canvasElement.height = videoHeight;
+        ctx.translate(videoWidth, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(this.videoElement, 0, 0, videoWidth, videoHeight);
+        return this.canvasElement.toDataURL('image/jpeg', 0.8);
+    }
+
     showSettingsPanel() {
-      if (this.settingsContainer) {
-         return;
-      }
+      if (this.settingsContainer) return;
+
       const { width, height } = this.sys.game.config;
 
       this.settingsContainer = this.add.container(0, 0);
@@ -210,8 +336,7 @@ export class MainMenu extends Phaser.Scene {
       overlay.setInteractive();
       this.settingsContainer.add(overlay);
 
-      const panel = this.add.image(width / 2, height / 2, 'settingMenu')
-         .setScale(0.45);
+      const panel = this.add.image(width / 2, height / 2, 'settingMenu').setScale(0.45);
       this.settingsContainer.add(panel);
       
       const sfxRowY = height / 2 - 20;
@@ -274,157 +399,23 @@ export class MainMenu extends Phaser.Scene {
       musicOnBtn.on('pointerdown', () => {
          this.isMusicOn = true;
          this.registry.set('isMusicOn', true);
-         if (music) {
-            music.setMute(false)
-         }
+         if (music) music.setMute(false);
          updateButtons();
       });
       musicOffBtn.on('pointerdown', () => {
          this.isMusicOn = false;
          this.registry.set('isMusicOn', false); 
-         if (music) {
-            music.setMute(true)
-         }
+         if (music) music.setMute(true);
          updateButtons();
       });
 
-      this.settingsContainer.add([
-         sfxOnBtn, sfxOffBtn, musicOnBtn, musicOffBtn, closeBtn
-      ]);
-
+      this.settingsContainer.add([sfxOnBtn, sfxOffBtn, musicOnBtn, musicOffBtn, closeBtn]);
       updateButtons();
    }
 
-   onFaceResults(results) {
-        
-        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            // --- WAJAH KEDETEK ---
-            this.faceLostCounter = 0;
-            
-            // Kalo kita lagi 'SEARCHING'
-            if (this.loginState === 'SEARCHING' || this.loginState === 'FAILED') {
-                const landmarks = results.multiFaceLandmarks[0];
-                const currentPose = this.calculateFaceYaw(landmarks);
-
-                if (currentPose === 'depan') {
-                    // Muka lurus DITEMUKAN!
-                    // 1. "Kunci" state-nya
-                    this.loginState = 'LOGGING_IN'; 
-                    // 2. LANGSUNG TEMBAK
-                    this.attemptLogin(); 
-                } else {
-                    // Muka miring
-                    this.infoText.setText('Posisikan wajah lurus ke DEPAN...');
-                }
-            }
-            // (Kalo state 'LOGGING_IN' atau 'LOGGED_IN', kita diem aja)
-            
-        } else {
-            // --- WAJAH GAK KEDETEK ---
-            
-            // Kalo kita lagi 'LOGGED_IN' (atau 'FAILED') dan mukanya ilang
-            if (this.loginState === 'LOGGED_IN') {
-                this.handleLogout(); // Panggil fungsi logout
-            }
-
-            if ((this.loginState === 'SEARCHING' || this.loginState === 'FAILED') 
-                && this.faceLostCounter > this.FACE_LOST_THRESHOLD) 
-            {
-                // --- INI DIA "HARD RESET" (JURUS ABANG) ---
-                console.warn("Wajah 'stuck' gak kedeteksi. Melakukan Hard Reset MediaPipe...");
-                
-                this.faceLostCounter = 0; // Reset timer
-                
-                // Kita "Reboot" Manager-nya
-                this.faceMeshManager.stop();
-                this.faceMeshManager = new FaceMeshManager(this.videoElement, this.onFaceResults.bind(this));
-                
-                this.infoText.setText('Kamera di-reset. Mencari wajah...');
-            }
-        }
-    }
-
-    async attemptLogin() {
-        this.infoText.setText('Mencocokkan wajah...');
-        
-        const imageBase64 = this.takeSnapshot();
-        if (!imageBase64 || imageBase64 === 'data:,') {
-            this.infoText.setText('Gagal ambil foto. Coba lagi.');
-            this.loginState = 'SEARCHING'; // Buka kunci
-            return;
-        }
-        
-        try {
-            const response = await fetch('http://127.0.0.1:5000/login-wajah', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image_base64: imageBase64 })
-            });
-        
-            const result = await response.json();
-        
-            if (!response.ok) {
-                // (Misal: "Wajah tidak dikenal")
-                throw new Error(result.message); 
-            }
-        
-            // --- LOGIN SUKSES ---
-            this.loginState = 'LOGGED_IN';
-            this.currentMuridId = result.murid.id_murid;
-            
-            // Update UI
-            this.welcomeText.setText(`Halo, ${result.murid.nama}!`);
-            this.infoText.setText('Login sukses. Silakan mulai.');
-            this.infoText.setColor('#00ff00');
-        
-        } catch (error) {
-            // --- LOGIN GAGAL ---
-            this.loginState = 'FAILED';
-            this.infoText.setText(error.message); // (Misal: "Wajah tidak dikenal")
-            this.infoText.setColor('#ff0000');
-        }
-    }
-
-    // --- FUNGSI "LOGOUT" (BARU) ---
-    handleLogout() {
-        console.log("LOGOUT: Wajah hilang, reset ke 'SEARCHING'.");
-        this.loginState = 'SEARCHING';
-        this.currentMuridId = null;
-        
-        // Reset UI
-        this.welcomeText.setText('Selamat Datang!');
-        this.infoText.setText('Mencari wajah...');
-        this.infoText.setColor('#ffff00');
-        
-    }
-
-    // --- FUNGSI "RUMUS YAW" (Sama kayak Register) ---
-    calculateFaceYaw(landmarks) {
-        const zLeft = landmarks[234].z;
-        const zRight = landmarks[454].z;
-        const zDiff = zLeft - zRight;
-        const YAW_THRESHOLD = 0.04;
-        
-        if (zDiff > YAW_THRESHOLD) return 'kanan'; 
-        else if (zDiff < -YAW_THRESHOLD) return 'kiri';
-        else return 'depan';
-    }
-    
-    // --- FUNGSI "NGEFOTO" (Sama kayak Register) ---
-    takeSnapshot() {
-        if (this.videoElement.readyState < 3 || this.videoElement.videoWidth === 0) {
-            console.error("Snapshot Gagal: Video belum siap.");
-            return null;
-        }
-        const ctx = this.canvasElement.getContext('2d');
-        const videoWidth = this.videoElement.videoWidth;
-        const videoHeight = this.videoElement.videoHeight;
-        this.canvasElement.width = videoWidth;
-        this.canvasElement.height = videoHeight;
-        ctx.translate(videoWidth, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(this.videoElement, 0, 0, videoWidth, videoHeight);
-        return this.canvasElement.toDataURL('image/jpeg', 0.8);
-    }
-
+   shutdown() {
+       if(this.faceMeshManager) {
+           this.faceMeshManager.stop();
+       }
+   }
 }
