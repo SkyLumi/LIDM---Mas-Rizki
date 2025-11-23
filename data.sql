@@ -27,6 +27,7 @@ INSERT INTO public."Jenis_Hambatan" (id_hambatan, jenis_hambatan) VALUES
 
 INSERT INTO public."Pengguna" (id_pengguna, email, password, id_role) VALUES
 (1, 'dinamustawati25@gmail.com', 'pbkdf2:sha256:1000000$IO28EZJBAk7W18qf$a934e0247cc1ac21c564ce18e2b97b7849721637d83cca215ee663cfb72bbfe9', 2);
+(2, 'arkana@gmail.com','pbkdf2:sha256:1000000$HId1BgxuwFhenoTg$4d5a95130c4d3dae8a1597f6f7e89fd0f4c3ee14a6628be936a06b5227f77497', 3);
 
 INSERT INTO public."Keterampilan" (id_keterampilan, nama_keterampilan, deskripsi) VALUES
 (1, 'fokus', 'kemampuan untuk berkonsentrasi terhadap obyek virtual'),
@@ -54,8 +55,8 @@ INSERT INTO public."Game_Keterampilan" (id_games_dashboard, id_keterampilan) VAL
 
 INSERT INTO public."Profil" (id_profil, nama_lengkap, nomor_absen, id_pengguna, avatar, face_id, kelas, id_hambatan, id_sekolah) VALUES
 (1, 'Dina Mustiawati', null, 1, null, null, null, null, 1),
-(2, 'Arkana Al-Husna', 1, 2, null, 'static/encodings\profil_4.npy', 5, 5, 1),
-(3, 'Hana Sharifah', 2, 3, null, null, 4, 1, 1),
-(4, 'Danentara Kusuma', 3, 4, null, null, 1, 1, 1),
-(5, 'Agil Jordi Wardhana', 4, 5, null, null, 2, 1, 1),
-(6, 'Ananda Mikhail', 5, 6, null, null, 6, 1, 1);
+(2, 'Arkana Al-Husna', 1, 2, null, 'static/encodings\profil_4.npy', 5, 5, 1);
+-- (3, 'Hana Sharifah', 2, 3, null, null, 4, 1, 1),
+-- (4, 'Danentara Kusuma', 3, 4, null, null, 1, 1, 1),
+-- (5, 'Agil Jordi Wardhana', 4, 5, null, null, 2, 1, 1),
+-- (6, 'Ananda Mikhail', 5, 6, null, null, 6, 1, 1)

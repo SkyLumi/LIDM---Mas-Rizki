@@ -37,7 +37,7 @@ app.register_blueprint(game_bp, url_prefix='/v1')
 
 CORS(app, 
      supports_credentials=True, 
-     resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}}
+     resources={r"/*": {"origins": ["https://dashboard.cloudsup.id", "http://127.0.0.1:5173", "http://127.0.0.1:5000"]}}
 )
 
 # -----------------------------------------------------------------
@@ -46,7 +46,7 @@ CORS(app,
 
 @app.route('/')
 def menu():
-    return redirect("http://127.0.0.1:5173/dashboard", code=302)
+    return redirect("https://dashboard.cloudsup.id", code=302)
 
 @app.route('/tangkap-game')
 def tangkap_game():

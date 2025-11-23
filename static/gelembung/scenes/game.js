@@ -1,6 +1,7 @@
 import MediaPipeManager from "./mediapipeManager.js";
+import { API_BASE_URL }  from '../../config.js';
 
-export class Game extends Phaser.Scene {
+export default class Game extends Phaser.Scene {
    constructor() {
       super('Game')
       this.camera = null
@@ -60,8 +61,8 @@ export class Game extends Phaser.Scene {
             this.baseSpeed = 1.0;
       }
 
-      this.starThresholds.one = this.maxScore * 0.6
-      this.starThresholds.two = this.maxScore * 0.8
+      this.starThresholds.one = 800
+      this.starThresholds.two = 1400
    }
 
    create() {
@@ -103,7 +104,8 @@ export class Game extends Phaser.Scene {
          totalFrames: 0,   // Total frame game
          handLossFrames: 0, // Total frame waktu tangan hilang
          heatmapData: [],   // nampung data heatmap (x, y, t)
-         reactionTimes: []  // (Waktu Reaksi) Buat game Gelembung
+         reactionTimes: [],
+         missedBubbles: 0 // Tambahan untuk hitung koordinasi
       };
 
       //    Bubble Group      //
@@ -223,6 +225,8 @@ export class Game extends Phaser.Scene {
                if (this.selectedLevel > 1) {
                   this.loseLife();
                }
+               // Tambahkan counter missed bubbles untuk hitung koordinasi
+               this.analytics.missedBubbles++;
             }
             bubble.destroy();
          }
@@ -245,6 +249,7 @@ export class Game extends Phaser.Scene {
 
    updateScoreUI() {
       if (this.score < 0) this.score = 0;
+      
       const poppedBubbleCount = this.analytics.reactionTimes.length;
       this.scoreText.setText(poppedBubbleCount.toString().padStart(2, '0'));
 
@@ -252,27 +257,31 @@ export class Game extends Phaser.Scene {
          
          const star1_VisualY = 0.5;
          const star2_VisualY = 0.7;
-         const star3_VisualY = 1.0;
-
-         const scorePercent = this.score / this.maxScore;
          
-         const star1_Score = this.starThresholds.one / this.maxScore;
-         const star2_Score = this.starThresholds.two / this.maxScore;
+         const slowZoneVisualCap = 0.80; 
+
+         const scoreStar1 = 800;
+         const scoreStar2 = 1400;
+         const scoreJump  = 2000;
+         const scoreMax   = 2000;
 
          let visualPercentage = 0;
          let t = 0;
 
-         if (scorePercent <= star1_Score) {
-            t = scorePercent / star1_Score;
+         if (this.score >= scoreJump) {
+            visualPercentage = 1.0; 
+         } 
+         else if (this.score <= scoreStar1) {
+            t = this.score / scoreStar1;
             visualPercentage = Phaser.Math.Linear(0, star1_VisualY, t);
-         
-         } else if (scorePercent <= star2_Score) {
-            t = (scorePercent - star1_Score) / (star2_Score - star1_Score);
+         }
+         else if (this.score <= scoreStar2) {
+            t = (this.score - scoreStar1) / (scoreStar2 - scoreStar1);
             visualPercentage = Phaser.Math.Linear(star1_VisualY, star2_VisualY, t);
-         
-         } else {
-            t = (scorePercent - star2_Score) / (1.0 - star2_Score);
-            visualPercentage = Phaser.Math.Linear(star2_VisualY, star3_VisualY, t);
+         }
+         else {
+            t = (this.score - scoreStar2) / (scoreJump - scoreStar2);
+            visualPercentage = Phaser.Math.Linear(star2_VisualY, slowZoneVisualCap, t);
          }
          
          visualPercentage = Phaser.Math.Clamp(visualPercentage, 0, 1);
@@ -602,33 +611,62 @@ export class Game extends Phaser.Scene {
 
       const totalPlayTimeMs = this.time.now - this.analytics.gameStartTime;
 
+      // --- HITUNG METRIK ---
+
+      // 1. Fokus (Persentase tangan terlihat)
       let skorFokus = 0;
       if (this.analytics.totalFrames > 0) {
          skorFokus = ((this.analytics.totalFrames - this.analytics.handLossFrames) / this.analytics.totalFrames) * 100;
       }
 
-      let avgReactionTimeMs = 0;
+      // 2. Waktu Reaksi (Rata-rata)
+      let avgReactionTime = 0;
       const reactionTimes = this.analytics.reactionTimes;
 
       if (reactionTimes.length > 0) {
          const totalReactionTime = reactionTimes.reduce((acc, time) => acc + time, 0);
-         avgReactionTimeMs = totalReactionTime / reactionTimes.length;
+         avgReactionTime = totalReactionTime / reactionTimes.length;
       }
 
+      // 3. Koordinasi (Akurasi Pecah Gelembung)
+      // Rumus: (Jumlah Pecah / (Jumlah Pecah + Jumlah Lewat)) * 100
+      const poppedCount = reactionTimes.length;
+      const missedCount = this.analytics.missedBubbles;
+      const totalInteraction = poppedCount + missedCount;
+      
+      let skorKoordinasi = 0;
+      if (totalInteraction > 0) {
+         skorKoordinasi = (poppedCount / totalInteraction) * 100;
+      } else {
+         // Jika tidak ada interaksi sama sekali tapi menang (misal level kosong?) set 100, kalau kalah 0
+         skorKoordinasi = isWin ? 100 : 0;
+      }
+
+      // --- AMBIL ID MURID DARI REGISTRY ---
+      const muridId = this.registry.get('currentMuridId');
+
       const analyticsReport = {
-         userId: "id_anak_abk_123",
+         id_profil: muridId || "guest_unknown",
+         id_games_dashboard: 1, // ID untuk Game Gelembung
          level: this.selectedLevel,
          finalScore: this.score,
+         win: isWin,
          totalPlayTimeSeconds: totalPlayTimeMs / 1000,
          metrics: {
-               fokus: skorFokus.toFixed(1),
-               avgReactionTimeSeconds: (avgReactionTimeMs / 1000).toFixed(2),
-               bubblesPopped: reactionTimes.length
+             fokus: skorFokus.toFixed(1),
+             koordinasi: skorKoordinasi.toFixed(1),
+             waktuReaksi: avgReactionTime.toFixed(0) // ms (tanpa koma)
          },
          rawHeatmap: this.analytics.heatmapData
       };
       
-      console.log("LAPORAN ANALITIK:", analyticsReport);
+      console.log("LAPORAN ANALITIK BARU:", analyticsReport);
+
+      if (this.score >= this.starThresholds.one) {
+          this.sendAnalyticsToAPI(analyticsReport);
+      } else {
+          console.log("Skor belum mencapai bintang 1, data tidak dikirim ke API.");
+      }
 
       this.scene.launch('Result', {
          isWin: isWin,
@@ -638,6 +676,32 @@ export class Game extends Phaser.Scene {
          selectedLevel: this.selectedLevel
       });
    }
+
+   async sendAnalyticsToAPI(data) {
+        const apiEndpoint = `${API_BASE_URL}/v1/analytics/save`; 
+
+        console.log('Mengirim data ke API...', data);
+
+        try {
+            const response = await fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('API Sukses:', result);
+
+        } catch (error) {
+            console.error('API Gagal Nembak:', error);
+        }
+    }
 
    onMediaPipeResults(results) {
       if (this.gameState !== 'PLAYING' || !this.sys?.game) {
@@ -652,7 +716,7 @@ export class Game extends Phaser.Scene {
 
       if (results.multiHandLandmarks && results.multiHandedness) {
          
-         const timestamp = this.time.now - this.analytics.gameStartTime;nmbjnm,
+         const timestamp = this.time.now - this.analytics.gameStartTime;
 
          results.multiHandLandmarks.forEach((landmarks, i) => {
             

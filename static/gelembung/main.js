@@ -1,9 +1,8 @@
-import { Game } from "./scenes/game.js"
+import Game  from "./scenes/game.js"
 import { LevelMenu } from "./scenes/levelMenu.js"
 import { MainMenu } from "./scenes/mainMenu.js"
 import { Preloader } from "./scenes/preloader.js"
 import { Result } from "./scenes/result.js"
-import { RegisterFace } from "./scenes/registerFace.js"
 
 const config = {
    type: Phaser.AUTO,
@@ -27,7 +26,6 @@ const config = {
       LevelMenu,
       Game,
       Result,
-      RegisterFace
    ],
    scale: {
       mode: Phaser.Scale.FIT,

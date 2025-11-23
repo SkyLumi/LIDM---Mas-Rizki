@@ -4,10 +4,13 @@
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Kartu</title>
+   
+   <!-- Import MediaPipe -->
    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
     <style>
       body {
          margin: 0;
@@ -33,11 +36,19 @@
     </style>
 </head>
 <body>
+   <!-- PENTING: Canvas untuk ambil foto snapshot -->
+   <canvas id="snapshotCanvas" style="display: none;"></canvas>
+
    <div id="game-container">
+      <!-- Class hidden biar konsisten, walau di CSS sudah z-index -1 -->
       <video id="webcam" class="hidden" autoplay playsinline></video>
    </div>
+
+   <!-- Scripts -->
    <script src="static/lib/phaser.js"></script>
    <script src="https://cdn.jsdelivr.net/npm/phaser-plugin-scene-watcher@7.0.0/dist/phaser-plugin-scene-watcher.umd.js"></script>
+   
+   <!-- Script Utama Game Kartu -->
    <script type="module" src="{{ url_for('static', filename='kartu/main.js') }}"></script>
 </body>
 </html>

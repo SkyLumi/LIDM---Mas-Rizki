@@ -171,35 +171,26 @@ export class MainMenu extends Phaser.Scene {
                 const currentPose = this.calculateFaceYaw(landmarks);
 
                 if (currentPose === 'depan') {
-                    // Muka lurus DITEMUKAN!
-                    // 1. "Kunci" state-nya
                     this.loginState = 'LOGGING_IN'; 
-                    // 2. LANGSUNG TEMBAK
                     this.attemptLogin(); 
                 } else {
                     // Muka miring
                     this.infoText.setText('Posisikan wajah lurus ke DEPAN...');
                 }
             }
-            // (Kalo state 'LOGGING_IN' atau 'LOGGED_IN', kita diem aja)
             
         } else {
-            // --- WAJAH GAK KEDETEK ---
-            
-            // Kalo kita lagi 'LOGGED_IN' (atau 'FAILED') dan mukanya ilang
             if (this.loginState === 'LOGGED_IN') {
-                this.handleLogout(); // Panggil fungsi logout
+                this.handleLogout();
             }
 
             if ((this.loginState === 'SEARCHING' || this.loginState === 'FAILED') 
                 && this.faceLostCounter > this.FACE_LOST_THRESHOLD) 
             {
-                // --- INI DIA "HARD RESET" (JURUS ABANG) ---
                 console.warn("Wajah 'stuck' gak kedeteksi. Melakukan Hard Reset MediaPipe...");
                 
-                this.faceLostCounter = 0; // Reset timer
+                this.faceLostCounter = 0;
                 
-                // Kita "Reboot" Manager-nya
                 this.faceMeshManager.stop();
                 this.faceMeshManager = new FaceMeshManager(this.videoElement, this.onFaceResults.bind(this));
                 
@@ -208,14 +199,13 @@ export class MainMenu extends Phaser.Scene {
         }
     }
 
-    // --- FUNGSI "NEMBAK API" LOGIN ---
     async attemptLogin() {
         this.infoText.setText('Mencocokkan wajah...');
         
         const imageBase64 = this.takeSnapshot();
         if (!imageBase64 || imageBase64 === 'data:,') {
             this.infoText.setText('Gagal ambil foto. Coba lagi.');
-            this.loginState = 'SEARCHING'; // Buka kunci
+            this.loginState = 'SEARCHING';
             return;
         }
         
@@ -229,16 +219,13 @@ export class MainMenu extends Phaser.Scene {
             const result = await response.json();
         
             if (!response.ok) {
-                // (Misal: "Wajah tidak dikenal")
                 throw new Error(result.message); 
             }
         
-            // --- LOGIN SUKSES ---
             this.loginState = 'LOGGED_IN';
             this.registry.set('currentMuridId', result.murid.id_murid);
             this.registry.set('currentMuridNama', result.murid.nama);
             
-            // Update UI
             this.welcomeText.setText(`Halo, ${result.murid.nama}!`);
             this.infoText.setText('Login sukses. Silakan mulai.');
             this.infoText.setColor('#00ff00');
@@ -257,9 +244,8 @@ export class MainMenu extends Phaser.Scene {
             }
         
         } catch (error) {
-            // --- LOGIN GAGAL ---
             this.loginState = 'FAILED';
-            this.infoText.setText(error.message); // (Misal: "Wajah tidak dikenal")
+            this.infoText.setText(error.message); 
             this.infoText.setColor('#ff0000');
             console.log(error.message)
 
@@ -270,7 +256,6 @@ export class MainMenu extends Phaser.Scene {
         }
     }
 
-    // --- FUNGSI "LOGOUT" (BARU) ---
     handleLogout() {
         if (!this.welcomeText || !this.welcomeText.active) {
             return; 
@@ -285,13 +270,12 @@ export class MainMenu extends Phaser.Scene {
         this.infoText.setColor('#ffff00');
 
         if (this.playButton) {
-            this.playButton.setTint(0x555555); // Gelapin
-            this.playButton.disableInteractive(); // Gabisa dipencet
+            this.playButton.setTint(0x555555);
+            this.playButton.disableInteractive(); 
         }
         
     }
 
-    // --- FUNGSI "RUMUS YAW" (Sama kayak Register) ---
     calculateFaceYaw(landmarks) {
         const zLeft = landmarks[234].z;
         const zRight = landmarks[454].z;
@@ -303,7 +287,6 @@ export class MainMenu extends Phaser.Scene {
         else return 'depan';
     }
     
-    // --- FUNGSI "NGEFOTO" (Sama kayak Register) ---
     takeSnapshot() {
         if (this.videoElement.readyState < 3 || this.videoElement.videoWidth === 0) {
             console.error("Snapshot Gagal: Video belum siap.");

@@ -24,7 +24,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
-COPY app.py api_analytics.py api_auth.py api_master.py extensions.py models.py ./
+COPY app.py api_analytics.py api_auth.py api_master.py api_game.py extensions.py models.py ./
 COPY data.sql ./
 COPY static/ static/
 COPY templates/ templates/
