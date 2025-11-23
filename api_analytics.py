@@ -279,19 +279,12 @@ def get_laporan_detail(id_laporan):
 @analytics_bp.route('/analytics/history/<int:id_profil>', methods=['GET'])
 @guru_required
 def get_game_history(id_profil):
-    """
-    API (HANYA GURU) untuk data chart 'Riwayat Penggunaan Game'.
-    Mengembalikan:
-    1. Total Game Played (per Game)
-    2. Total Play Time (per Game)
-    3. Heatmap Data (5 minggu terakhir)
-    """
     try:
-        # --- 1. CEK KEAMANAN (Sama kayak yang lain) ---
-        # (Copas aja logic cek guru_id vs profil_id_sekolah dari fungsi lain)
-        
-        # --- 2. AMBIL DATA TOTAL PER GAME (Bar Chart) ---
-        # (Hitung berapa kali main & total durasi per game)
+        # ... (Code Query Total Game & Durasi SAMA PERSIS, GAK BERUBAH) ...
+        # Copas aja bagian 'stmt_total' dan 'games_stats' dari kode sebelumnya
+        # Biar hemat tempat saya langsung ke bagian HEATMAP-nya ya:
+
+        # --- 1. COPY BAGIAN INI KE ATAS (Code lama) ---
         stmt_total = (
             db.select(
                 GamesDashboard.nama_game,
@@ -306,19 +299,25 @@ def get_game_history(id_profil):
 
         games_stats = {}
         for row in results_total:
-            nama_game = row[0].upper() # Biar konsisten uppercase
+            nama_game = row[0].upper()
             games_stats[nama_game] = {
                 'count': row[1],
                 'duration_minutes': round(row[2] / 60) if row[2] else 0
             }
+        # -----------------------------------------------
 
-        # --- 3. AMBIL DATA HEATMAP (5 MINGGU TERAKHIR) ---
-        # Kita butuh data harian: (Tanggal, Jumlah Main, Total Durasi)
+        # --- ▼▼▼ PERBAIKAN LOGIKA HEATMAP (MULAI DARI SENIN) ▼▼▼ ---
         
-        # Tentukan Range Tanggal (Hari ini - 35 hari)
         today = datetime.date.today()
-        start_date = today - datetime.timedelta(days=34) # 5 minggu * 7 hari - 1
+        
+        # 1. Cari "Senin" minggu ini
+        # (weekday(): Senin=0, ..., Jumat=4, Minggu=6)
+        monday_of_current_week = today - datetime.timedelta(days=today.weekday())
+        
+        # 2. Mundur 4 minggu ke belakang dari Senin itu (Total 5 minggu)
+        start_date = monday_of_current_week - datetime.timedelta(weeks=4)
 
+        # 3. Ambil Data DB (Sama kayak kemarin)
         stmt_daily = (
             db.select(
                 func.date(GameAktual.waktu_main).label('tanggal'),
@@ -331,57 +330,52 @@ def get_game_history(id_profil):
         )
         results_daily = db.session.execute(stmt_daily).all()
 
-        # Ubah ke Dictionary biar gampang diakses: {'2023-11-20': {'count': 5, 'dur': 100}, ...}
         daily_map = {}
         for row in results_daily:
-            tgl_str = row[0].isoformat() # YYYY-MM-DD
+            tgl_str = row[0].isoformat()
             daily_map[tgl_str] = {
                 'count': row[1],
                 'duration_minutes': round(row[2] / 60) if row[2] else 0
             }
 
-        # --- 4. FORMATTING HEATMAP ARRAY (5x7 GRID) ---
-        # Kita harus isi grid 5 minggu x 7 hari. Kalau tanggal gada data, isi 0.
-        
+        # 4. ISI GRID (PASTI DIMULAI DARI SENIN)
         heatmap_games = []
         heatmap_time = []
         weeks_label = []
 
-        # Loop 5 minggu ke belakang (Mulai dari yang paling lama)
-        current_day_pointer = start_date
+        current_day_pointer = start_date # Ini PASTI Senin
         
         for week_idx in range(5):
             week_row_games = []
             week_row_time = []
             
-            # Label Minggu (Misal: "Minggu 28")
-            # Kita pake ISO week number aja biar gampang
+            # Label Minggu
             iso_week = current_day_pointer.isocalendar()[1]
             weeks_label.append(f"Minggu {iso_week}")
 
-            for day_idx in range(7):
+            for day_idx in range(7): # 0=Senin ... 6=Minggu
                 tgl_str = current_day_pointer.isoformat()
                 data_hari = daily_map.get(tgl_str, {'count': 0, 'duration_minutes': 0})
                 
                 week_row_games.append(data_hari['count'])
                 week_row_time.append(data_hari['duration_minutes'])
                 
-                current_day_pointer += datetime.timedelta(days=1) # Lanjut besoknya
+                current_day_pointer += datetime.timedelta(days=1)
             
             heatmap_games.append(week_row_games)
             heatmap_time.append(week_row_time)
 
-        # --- 5. FINAL JSON RESPONSE ---
         return jsonify({
             "status": "sukses",
-            "games_stats": games_stats, # Data Bar Chart
+            "games_stats": games_stats,
             "heatmap": {
-                "games": heatmap_games, # Data Grid Game
-                "time": heatmap_time,   # Data Grid Waktu
-                "weeks": weeks_label    # Label Y-Axis
+                "games": heatmap_games,
+                "time": heatmap_time,
+                "weeks": weeks_label
             }
         }), 200
 
     except Exception as e:
         print(f"Error get history: {e}")
         return jsonify({"status": "gagal", "message": "Server error"}), 500
+    
