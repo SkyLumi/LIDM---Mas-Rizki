@@ -17,6 +17,12 @@ export class MainMenu extends Phaser.Scene {
       this.loginState = 'SEARCHING'; // SEARCHING, LOGGING_IN, LOGGED_IN, FAILED
       this.faceLostCounter = 0;
       this.FACE_LOST_THRESHOLD = 120;
+
+      // --- VARIABEL UI PROFIL ---
+      this.profileContainer = null;
+      this.profileNameText = null;
+      this.profileAvatar = null;
+      this.searchingEvent = null; // Timer untuk animasi titik
    }
 
    create() {
@@ -148,16 +154,8 @@ export class MainMenu extends Phaser.Scene {
             window.location.href = 'https://cloudsuptest.framer.website/dashboard';
         })
 
-        // --- TEXT UI ---
-        this.welcomeText = this.add.text(width / 2, 100, 'Selamat Datang!', {
-            fontSize: '48px', fill: '#fff'
-        }).setOrigin(0.5);
-
-        this.infoText = this.add.text(width / 2, 160, 'Mencari wajah...', {
-            fontSize: '24px', fill: '#ffff00'
-        }).setOrigin(0.5);
-
-        // --- (TOMBOL DAFTAR SUDAH DIHAPUS) ---
+        // --- BUAT UI PROFIL PEMAIN (POJOK KANAN ATAS) ---
+        this.createProfileUI();
 
         // --- INISIALISASI FACE MESH ---
         this.videoElement = document.getElementById('webcam');
@@ -167,7 +165,58 @@ export class MainMenu extends Phaser.Scene {
         this.events.once('shutdown', this.shutdown, this);
    }
 
-    // --- LOGIKA PENCARIAN WAJAH (CONTINUOUS LOOP) ---
+    // --- FUNGSI UI PROFIL BARU ---
+    createProfileUI() {
+        const { width } = this.sys.game.config;
+        
+        // Ukuran kotak profil
+        const panelWidth = 550;
+        const panelHeight = 180; // Sedikit lebih tinggi untuk 2 baris
+        
+        // Container di pojok kanan atas
+        this.profileContainer = this.add.container(width - panelWidth, 0);
+        this.profileContainer.setDepth(10); 
+
+        const bg = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x084EC5) 
+            .setOrigin(0, 0);
+
+        const labelText = this.add.text(25, 15, "Pemain saat ini", {
+            fontSize: '38px', 
+            fontFamily: 'RalewayBold',
+            color: '#ffffff'
+        });
+
+        const avatarY = 110; 
+        this.profileAvatar = this.add.circle(60, avatarY, 35, 0x00bcd4);
+
+        this.profileNameText = this.add.text(110, avatarY, "...", {
+            fontSize: '40px',
+            fontFamily: 'Raleway',
+            fontStyle: 'bold',
+            color: '#ffffff'
+        }).setOrigin(0, 0.5);
+
+        this.profileContainer.add([bg, labelText, this.profileAvatar, this.profileNameText]);
+
+        // --- ANIMASI TITIK-TITIK MENCARI ---
+        this.dotCount = 0;
+        
+        this.searchingEvent = this.time.addEvent({
+            delay: 500, // Update setiap 0.5 detik
+            loop: true,
+            callback: () => {
+                // Hanya animasi jika sedang SEARCHING
+                if (this.loginState === 'SEARCHING') {
+                    this.dotCount = (this.dotCount + 1) % 4; 
+                    const count = (this.dotCount % 3) + 1;
+                    const dots = ".".repeat(count);
+                    this.profileNameText.setText(dots);
+                }
+            }
+        });
+    }
+
+    // --- LOGIKA PENCARIAN WAJAH ---
     onFaceResults(results) {
         if (!this.sys || !this.sys.settings.active) return;
 
@@ -175,30 +224,38 @@ export class MainMenu extends Phaser.Scene {
             // --- WAJAH KEDETEK ---
             this.faceLostCounter = 0;
             
-            // Loop Pencarian: Jika masih SEARCHING atau FAILED (belum sukses), coba terus
             if (this.loginState === 'SEARCHING' || this.loginState === 'FAILED') {
                 const landmarks = results.multiFaceLandmarks[0];
                 const currentPose = this.calculateFaceYaw(landmarks);
 
                 if (currentPose === 'depan') {
-                    // Kunci state supaya tidak spam API berkali-kali dalam satu waktu
                     this.loginState = 'LOGGING_IN'; 
+                    
+                    this.profileNameText.setText("Mencocokkan...");
+                    this.profileNameText.setFontSize('24px'); 
+                    
                     this.attemptLogin(); 
                 } else {
-                    this.infoText.setText('Posisikan wajah lurus ke DEPAN...');
-                    this.infoText.setColor('#ffff00');
+                    // Instruksi luruskan wajah
+                    this.profileNameText.setText("Luruskan wajah!");
+                    this.profileNameText.setFontSize('24px');
+                    this.profileNameText.setColor('#ffff00'); 
                 }
             }
             
         } else {
-            // --- WAJAH GAK KEDETEK ---
-            
-            // Jika sudah login tapi wajah hilang, logout (security)
+            // --- WAJAH HILANG ---
             if (this.loginState === 'LOGGED_IN') {
                 this.handleLogout();
+            } else {
+                // Kembalikan ke titik-titik jika wajah hilang saat searching
+                if (this.loginState === 'SEARCHING' && this.profileNameText.text !== "...") {
+                     this.profileNameText.setColor('#ffffff');
+                     this.profileNameText.setFontSize('48px');
+                     this.profileNameText.setText("...");
+                }
             }
 
-            // Fitur Hard Reset (jika kamera freeze/stuck)
             if ((this.loginState === 'SEARCHING' || this.loginState === 'FAILED') 
                 && this.faceLostCounter > this.FACE_LOST_THRESHOLD) 
             {
@@ -206,7 +263,8 @@ export class MainMenu extends Phaser.Scene {
                 this.faceLostCounter = 0;
                 this.faceMeshManager.stop();
                 this.faceMeshManager = new FaceMeshManager(this.videoElement, this.onFaceResults.bind(this));
-                this.infoText.setText('Kamera di-reset. Mencari wajah...');
+                this.profileNameText.setText("Reset kamera...");
+                this.profileNameText.setFontSize('24px');
             }
             
             this.faceLostCounter++;
@@ -215,13 +273,11 @@ export class MainMenu extends Phaser.Scene {
 
     // --- FUNGSI LOGIN KE API ---
     async attemptLogin() {
-        this.infoText.setText('Mencocokkan wajah...');
-        this.infoText.setColor('#ffff00');
-        
         const imageBase64 = this.takeSnapshot();
         if (!imageBase64 || imageBase64 === 'data:,') {
-            this.infoText.setText('Gagal ambil foto. Coba lagi.');
-            this.loginState = 'SEARCHING'; // Kembalikan ke mode cari agar loop berlanjut
+            this.profileNameText.setText('Gagal foto...');
+            this.profileNameText.setFontSize('24px');
+            this.loginState = 'SEARCHING'; 
             return;
         }
         
@@ -244,14 +300,18 @@ export class MainMenu extends Phaser.Scene {
             this.registry.set('currentMuridId', result.murid.id_murid);
             this.registry.set('currentMuridNama', result.murid.nama);
             
-            this.welcomeText.setText(`Halo, ${result.murid.nama}!`);
-            this.infoText.setText('Login sukses. Silakan mulai.');
-            this.infoText.setColor('#00ff00');
+            // TAMPILKAN NAMA PEMAIN (Dari hasil response API yang baru disimpan)
+            this.profileNameText.setText(result.murid.nama);
+            this.profileNameText.setFontSize('32px'); 
+            this.profileNameText.setColor('#00ff00'); // Hijau
+            
+            // Ganti warna avatar ke hijau
+            this.profileAvatar.setFillStyle(0x4caf50);
 
             // NYALAKAN TOMBOL PLAY
             if (this.playButton) {
-                this.playButton.clearTint(); // Jadi terang
-                this.playButton.setInteractive(); // Bisa diklik
+                this.playButton.clearTint(); 
+                this.playButton.setInteractive(); 
                 
                 this.tweens.add({
                     targets: this.playButton,
@@ -264,14 +324,19 @@ export class MainMenu extends Phaser.Scene {
         
         } catch (error) {
             // --- LOGIN GAGAL ---
-            // Set status ke FAILED, nanti 'onFaceResults' akan mendeteksi ini 
-            // dan mencoba login lagi di frame berikutnya jika wajah masih ada.
             this.loginState = 'FAILED';
-            this.infoText.setText(error.message); 
-            this.infoText.setColor('#ff0000');
+            this.profileNameText.setText("Wajah Tak Dikenal"); 
+            this.profileNameText.setFontSize('24px');
+            this.profileNameText.setColor('#ff0000'); 
             console.error("Login Error:", error);
 
-            // Pastikan tombol mati
+            this.time.delayedCall(2000, () => {
+                this.loginState = 'SEARCHING';
+                this.profileNameText.setColor('#ffffff');
+                this.profileNameText.setFontSize('48px');
+                this.profileNameText.setText("...");
+            });
+
             if (this.playButton) {
                 this.playButton.setTint(0x555555);
                 this.playButton.disableInteractive();
@@ -281,17 +346,15 @@ export class MainMenu extends Phaser.Scene {
 
     // --- LOGOUT / RESET ---
     handleLogout() {
-        if (!this.welcomeText || !this.welcomeText.active) return; 
-
         console.log("LOGOUT: Wajah hilang, reset ke 'SEARCHING'.");
         this.loginState = 'SEARCHING';
         this.currentMuridId = null;
         
-        this.welcomeText.setText('Selamat Datang!');
-        this.infoText.setText('Mencari wajah...');
-        this.infoText.setColor('#ffff00');
+        this.profileNameText.setText('...');
+        this.profileNameText.setFontSize('48px');
+        this.profileNameText.setColor('#ffffff');
+        this.profileAvatar.setFillStyle(0x00bcd4);
 
-        // Matikan tombol Play
         if (this.playButton) {
             this.playButton.setTint(0x555555);
             this.playButton.disableInteractive();
@@ -310,9 +373,15 @@ export class MainMenu extends Phaser.Scene {
     }
     
     takeSnapshot() {
+        if (!this.canvasElement) {
+            console.warn("Canvas element belum siap!");
+            return null;
+        }
+        
         if (!this.videoElement || this.videoElement.readyState < 3 || this.videoElement.videoWidth === 0) {
             return null;
         }
+        
         const ctx = this.canvasElement.getContext('2d');
         const videoWidth = this.videoElement.videoWidth;
         const videoHeight = this.videoElement.videoHeight;
@@ -416,6 +485,9 @@ export class MainMenu extends Phaser.Scene {
    shutdown() {
        if(this.faceMeshManager) {
            this.faceMeshManager.stop();
+       }
+       if (this.searchingEvent) {
+           this.searchingEvent.remove();
        }
    }
 }
