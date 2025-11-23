@@ -1,4 +1,4 @@
-import { Game } from "./scenes/game.js"
+import Game  from "./scenes/game.js"
 import { LevelMenu } from "./scenes/levelMenu.js"
 import { MainMenu } from "./scenes/mainMenu.js"
 import { Preloader } from "./scenes/preloader.js"
