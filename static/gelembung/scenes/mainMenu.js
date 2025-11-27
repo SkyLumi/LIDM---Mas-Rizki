@@ -1,5 +1,5 @@
 import FaceMeshManager from './faceMeshManager.js';
-import { API_BASE_URL }  from '../../config.js';
+import { API_BASE_URL, DASHBOARD_BASE_URL }  from '../../config.js';
 
 export class MainMenu extends Phaser.Scene {
    constructor() {
@@ -151,7 +151,7 @@ export class MainMenu extends Phaser.Scene {
 
         quitButton.on('pointerdown', () => {
             if (this.isSfxOn) this.sound.play('sfxMenuButtonClick');
-            window.location.href = 'https://cloudsuptest.framer.website/dashboard';
+            window.location.href = `${DASHBOARD_BASE_URL}/teacher/dashboard`;
         })
 
         // --- BUAT UI PROFIL PEMAIN (POJOK KANAN ATAS) ---

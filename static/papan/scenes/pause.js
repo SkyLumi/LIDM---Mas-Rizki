@@ -8,56 +8,62 @@ export class Pause extends Phaser.Scene {
     }
 
     create() {
-        const { width, height } = this.sys.game.config
+        const { width, height } = this.sys.game.config;
+        const screenCenterX = width / 2;
+        const screenCenterY = height / 2;
 
-        let screenCenterX = width / 2
-        let screenCenterY = height / 2
-
+        // 1. Background Gelap Transparan
         this.add.rectangle(screenCenterX, screenCenterY, width, height, 0x000000, 0.5)
+            .setInteractive();
+
+        // 2. Panel Pause
+        this.add.image(screenCenterX, screenCenterY, 'pausePanel')
+            .setScale(1); 
+
+        // 3. Container Tombol
+        const buttonContainer = this.add.container(screenCenterX, screenCenterY + 30);
+
+        // --- KONFIGURASI UKURAN & JARAK ---
+        const btnScale = 0.75; // Diperkecil (tadi 1)
+        const btnGap = 200;   
+        const btnY = 20
+
+        // --- TOMBOL 1: CONTINUE (Kiri) ---
+        // Posisi X minus (-) untuk kiri
+        const resumeButton = this.add.image(-btnGap, btnY, 'continue-btn')
             .setInteractive()
-            .on('pointerdown', () => {});
-
-        this.add.image(screenCenterX - 10, 0, 'pausePanel')
-            .setScale(0.6)
-            .setOrigin(0.5, 0.4);
-
-        this.add.text(screenCenterX, screenCenterY - 50, 'Paused', {
-            fontFamily: 'lilita-one',
-            fontSize: '96px',
-            fill: '#ffffff'
-        }).setOrigin(0.5)
-
-        let panelContainer = this.add.container(screenCenterX, screenCenterY + 150)
-
-        const resumeButton = this.add.image(-150, 0, 'panelResume')
-            .setInteractive()
-            .setScale(2)
+            .setScale(btnScale); 
 
         resumeButton.on('pointerdown', () => {
-            this.scene.stop()
-            this.scene.resume(this.gameSceneKey)
+            this.scene.stop(); 
+            this.scene.resume(this.gameSceneKey); 
         });
 
-        const restartButton = this.add.image(0, 0, 'panelRestart')
+        // --- TOMBOL 2: HOME (Tengah) ---
+        // Posisi X 0 untuk tengah
+        const homeButton = this.add.image(0, btnY, 'home-btn')
             .setInteractive()
-            .setScale(2)
+            .setScale(btnScale);
 
-        restartButton.on('pointerdown', () => {
-            this.scene.stop()
-            this.scene.stop(this.gameSceneKey)
-            this.scene.start(this.gameSceneKey)
+        homeButton.on('pointerdown', () => {
+            this.scene.stop();
+            this.scene.stop(this.gameSceneKey);
+            this.scene.start('MainMenu'); 
         });
 
-        const menuButton = this.add.image(150, 0, 'panelHome')
+        // --- TOMBOL 3: RETRY (Kanan) ---
+        // Posisi X positif (+) untuk kanan
+        const retryButton = this.add.image(btnGap, btnY , 'retry-btn')
             .setInteractive()
-            .setScale(2)
+            .setScale(btnScale);
 
-        menuButton.on('pointerdown', () => {
-            this.scene.stop()
-            this.scene.stop(this.gameSceneKey)
-            this.scene.start('MainMenu')
+        retryButton.on('pointerdown', () => {
+            this.scene.stop();
+            this.scene.stop(this.gameSceneKey);
+            this.scene.start(this.gameSceneKey); 
         });
 
-        panelContainer.add([resumeButton, restartButton, menuButton])
+        // Masukkan semua tombol ke dalam container
+        buttonContainer.add([resumeButton, homeButton, retryButton]);
     }
 }

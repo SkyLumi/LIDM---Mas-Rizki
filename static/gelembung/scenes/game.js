@@ -20,6 +20,8 @@ export default class Game extends Phaser.Scene {
       this.tutorialContainer = null
       this.pauseContainer = null
 
+      this.analytics = null;
+
       this.maxBubbleCount = 1;
       this.bubbleTypes = ['blue', 'purple'];
       this.baseSpeed = 1.0;
@@ -105,7 +107,7 @@ export default class Game extends Phaser.Scene {
          handLossFrames: 0, // Total frame waktu tangan hilang
          heatmapData: [],   // nampung data heatmap (x, y, t)
          reactionTimes: [],
-         missedBubbles: 0 // Tambahan untuk hitung koordinasi
+         missedBubbles: 0
       };
 
       //    Bubble Group      //
@@ -648,7 +650,7 @@ export default class Game extends Phaser.Scene {
       const analyticsReport = {
          id_profil: muridId || "guest_unknown",
          id_games_dashboard: 1, // ID untuk Game Gelembung
-         level: this.selectedLevel,
+         level: `level${this.selectedLevel}`,
          finalScore: this.score,
          win: isWin,
          totalPlayTimeSeconds: totalPlayTimeMs / 1000,

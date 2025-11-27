@@ -72,8 +72,7 @@ export default class level extends Phaser.Scene {
 
    async fetchLevelProgress() {
       const idProfil = this.registry.get('currentMuridId');
-      const namaGame = "KARTU"; // Nama game di database
-
+      const namaGame = "KARTU COCOK";
       if (!idProfil) {
          console.warn("ID Profil tidak ditemukan, menggunakan progress default.");
          return;

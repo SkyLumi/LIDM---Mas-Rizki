@@ -1,5 +1,5 @@
 import FaceMeshManager from './faceMeshManager.js';
-import { API_BASE_URL } from '../../config.js';
+import { API_BASE_URL, DASHBOARD_BASE_URL } from '../../config.js';
 
 // You can write more code here
 
@@ -14,21 +14,8 @@ export default class home extends Phaser.Scene {
       super("home");
 
       /* START-USER-CTR-CODE */
-      this.faceMeshManager = null;
-      this.videoElement = null;
-      this.canvasElement = null;
-      
-      this.currentMuridId = null;
-      this.loginState = 'SEARCHING'; // SEARCHING, LOGGING_IN, LOGGED_IN, FAILED
-      
-      this.faceLostCounter = 0;
-      this.FACE_LOST_THRESHOLD = 120;
-
-      // --- VARIABEL UI PROFIL ---
-      this.profileContainer = null;
-      this.profileNameText = null;
-      this.profileAvatar = null;
-      this.searchingEvent = null; 
+      // HAPUS inisialisasi di sini, pindahkan ke init() atau create()
+      // biar kereset setiap kali scene dibuka ulang.
       /* END-USER-CTR-CODE */
    }
 
@@ -65,7 +52,7 @@ export default class home extends Phaser.Scene {
       })
 
       keluar_.on('pointerdown', () => {
-         window.location.href = 'https://cloudsuptest.framer.website/dashboard';
+         window.location.href = `${DASHBOARD_BASE_URL}/teacher/dashboard`;
       })
 
       // --- MODIFIKASI TOMBOL PLAY (JADI GLOBAL PROPERTY) ---
@@ -132,6 +119,24 @@ export default class home extends Phaser.Scene {
    // Write your code here
 
    create() {
+      // --- ▼▼▼ RESET VARIABEL DI SINI (PENTING!) ▼▼▼ ---
+      // Ini wajib biar pas balik dari game, statusnya gak nyangkut di 'LOGGED_IN'
+      this.faceMeshManager = null;
+      this.videoElement = null;
+      this.canvasElement = null;
+      
+      this.currentMuridId = null;
+      this.loginState = 'SEARCHING'; // Pastikan reset ke SEARCHING
+      
+      this.faceLostCounter = 0;
+      this.FACE_LOST_THRESHOLD = 120;
+
+      this.profileContainer = null;
+      this.profileNameText = null;
+      this.profileAvatar = null;
+      this.searchingEvent = null; 
+      // ---------------------------------------------------
+
       this.editorCreate();
       
       const { width, height } = this.scale;
@@ -154,6 +159,11 @@ export default class home extends Phaser.Scene {
           this.canvasElement.id = 'snapshotCanvas';
           this.canvasElement.style.display = 'none'; 
           document.body.appendChild(this.canvasElement);
+      }
+
+      // Pastikan video play (kadang browser pause otomatis pas pindah tab/scene)
+      if (this.videoElement && this.videoElement.paused) {
+          this.videoElement.play().catch(e => console.log("Force play video error:", e));
       }
 
       this.faceMeshManager = new FaceMeshManager(this.videoElement, this.onFaceResults.bind(this));
@@ -207,7 +217,10 @@ export default class home extends Phaser.Scene {
                     this.dotCount = (this.dotCount + 1) % 4; 
                     const count = (this.dotCount % 3) + 1;
                     const dots = ".".repeat(count);
-                    this.profileNameText.setText(dots);
+                    // Pastikan text object masih ada sebelum di-set (Anti-crash)
+                    if (this.profileNameText && this.profileNameText.scene) {
+                        this.profileNameText.setText(dots);
+                    }
                 }
             }
         });
@@ -215,6 +228,7 @@ export default class home extends Phaser.Scene {
 
    // --- LOGIKA DETEKSI WAJAH & LOGIN ---
    onFaceResults(results) {
+        // Cek scene active biar gak error saat scene transisi
         if (!this.sys || !this.sys.settings.active) return;
 
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
@@ -259,8 +273,14 @@ export default class home extends Phaser.Scene {
             {
                 console.warn("Wajah 'stuck'. Melakukan Hard Reset MediaPipe...");
                 this.faceLostCounter = 0;
-                this.faceMeshManager.stop();
+                
+                // Coba stop dulu
+                if (this.faceMeshManager) {
+                    this.faceMeshManager.stop();
+                }
+                // Bikin baru
                 this.faceMeshManager = new FaceMeshManager(this.videoElement, this.onFaceResults.bind(this));
+                
                 this.profileNameText.setText("Reset kamera...");
                 this.profileNameText.setFontSize('24px');
             }
@@ -298,12 +318,15 @@ export default class home extends Phaser.Scene {
             this.registry.set('currentMuridNama', result.murid.nama);
             
             // TAMPILKAN NAMA PEMAIN
-            this.profileNameText.setText(result.murid.nama);
-            this.profileNameText.setFontSize('32px'); // Ukuran normal nama
-            this.profileNameText.setColor('#00ff00'); // Hijau
+            if (this.profileNameText && this.profileNameText.scene) {
+                this.profileNameText.setText(result.murid.nama);
+                this.profileNameText.setFontSize('32px'); 
+                this.profileNameText.setColor('#00ff00'); 
+            }
             
-            // Ganti warna avatar ke hijau
-            this.profileAvatar.setFillStyle(0x4caf50);
+            if (this.profileAvatar && this.profileAvatar.scene) {
+                this.profileAvatar.setFillStyle(0x4caf50);
+            }
 
             // --- BUKA KUNCI TOMBOL PLAY ---
             if (this.play_) {
@@ -323,16 +346,20 @@ export default class home extends Phaser.Scene {
         } catch (error) {
             // --- LOGIN GAGAL ---
             this.loginState = 'FAILED';
-            this.profileNameText.setText("Wajah Tak Dikenal"); 
-            this.profileNameText.setFontSize('24px');
-            this.profileNameText.setColor('#ff0000'); 
+            if (this.profileNameText && this.profileNameText.scene) {
+                this.profileNameText.setText("Wajah Tak Dikenal"); 
+                this.profileNameText.setFontSize('24px');
+                this.profileNameText.setColor('#ff0000'); 
+            }
             console.error("Login Error:", error);
 
             this.time.delayedCall(2000, () => {
                 this.loginState = 'SEARCHING';
-                this.profileNameText.setColor('#ffffff');
-                this.profileNameText.setFontSize('48px');
-                this.profileNameText.setText("...");
+                if (this.profileNameText && this.profileNameText.scene) {
+                    this.profileNameText.setColor('#ffffff');
+                    this.profileNameText.setFontSize('48px');
+                    this.profileNameText.setText("...");
+                }
             });
 
             // Kunci lagi tombolnya
@@ -348,10 +375,15 @@ export default class home extends Phaser.Scene {
         this.loginState = 'SEARCHING';
         this.currentMuridId = null;
         
-        this.profileNameText.setText('...');
-        this.profileNameText.setFontSize('48px');
-        this.profileNameText.setColor('#ffffff');
-        this.profileAvatar.setFillStyle(0x00bcd4);
+        if (this.profileNameText && this.profileNameText.scene) {
+            this.profileNameText.setText('...');
+            this.profileNameText.setFontSize('48px');
+            this.profileNameText.setColor('#ffffff');
+        }
+        
+        if (this.profileAvatar && this.profileAvatar.scene) {
+            this.profileAvatar.setFillStyle(0x00bcd4);
+        }
 
         if (this.play_) {
             this.play_.setTint(0x555555);
@@ -392,70 +424,112 @@ export default class home extends Phaser.Scene {
     }
 
     shutdown() {
+       // Pastikan dibersihkan bersih
        if(this.faceMeshManager) {
            this.faceMeshManager.stop();
+           this.faceMeshManager = null; // Putus hubungan
        }
        if (this.searchingEvent) {
            this.searchingEvent.remove();
+           this.searchingEvent = null;
        }
     }
 
    // --- SETTINGS PANEL ---
    openSettingPanel() {
-      const { width, height } = this.scale; 
-      const centerX = width / 2;
-      const centerY = height / 2;
+    const { width, height } = this.scale;
+    const centerX = width / 2;
+    const centerY = height / 2;
 
-      // 1. Buat Container
-      const settingContainer = this.add.container(0, 0);
-      settingContainer.setDepth(100); 
+    // 1. Buat Container
+    const settingContainer = this.add.container(0, 0);
+    settingContainer.setDepth(100);
 
-      // 2. Overlay Redup
-      const overlay = this.add.rectangle(centerX, centerY, width, height, 0x000000, 0.7);
-      overlay.setInteractive();
-      
-      overlay.on('pointerdown', () => {
-         settingContainer.destroy();
-      });
-      
-      settingContainer.add(overlay);
+    // 2. Overlay Redup
+    const overlay = this.add.rectangle(centerX, centerY, width, height, 0x000000, 0.7);
+    overlay.setInteractive();
+    
+    // Klik di luar panel untuk tutup panel
+    overlay.on('pointerdown', () => {
+        settingContainer.destroy();
+    });
+    
+    settingContainer.add(overlay);
 
-      // 3. Panel Background
-      const panel = this.add.image(centerX + 260, centerY, "settingPanel")
-         .setScale(1.45); 
-      settingContainer.add(panel);
+    // 3. Panel Background
+    // Posisi Panel ada di X: centerX + 260
+    const panelX = centerX + 260;
+    const panel = this.add.image(panelX, centerY, "settingPanel")
+        .setScale(1.45);
+    settingContainer.add(panel);
 
-      const toggleX = centerX + 250; 
-      const sfxY = centerY - 115;     
-      const musicY = centerY + 70;  
+    const toggleX = centerX + 250; 
+    const sfxY = centerY - 115;     
+    const musicY = centerY + 70;  
 
-      // --- Tombol Efek (SFX) ---
-      const isSfxOn = this.registry.get('isSfxOn');
-      const sfxBtn = this.add.image(toggleX, sfxY, isSfxOn ? "toggleOn" : "toggleOff")
-         .setScale(0.75);
-      sfxBtn.setInteractive();
-      
-      sfxBtn.on('pointerdown', () => {
-         const newState = !this.registry.get('isSfxOn');
-         this.registry.set('isSfxOn', newState);
-         sfxBtn.setTexture(newState ? "toggleOn" : "toggleOff");
-      });
-      settingContainer.add(sfxBtn);
+    // --- Tombol Efek (SFX) ---
+    const isSfxOn = this.registry.get('isSfxOn');
+    const sfxBtn = this.add.image(toggleX, sfxY, isSfxOn ? "toggleOn" : "toggleOff")
+        .setScale(0.75);
+    sfxBtn.setInteractive();
+    
+    sfxBtn.on('pointerdown', () => {
+        const newState = !this.registry.get('isSfxOn');
+        this.registry.set('isSfxOn', newState);
+        sfxBtn.setTexture(newState ? "toggleOn" : "toggleOff");
+    });
+    settingContainer.add(sfxBtn);
 
-      // --- Tombol Musik ---
-      const isMusicOn = this.registry.get('isMusicOn');
-      const musicBtn = this.add.image(toggleX, musicY, isMusicOn ? "toggleOn" : "toggleOff")
-         .setScale(0.75);
-      musicBtn.setInteractive();
+    // --- Tombol Musik ---
+    const isMusicOn = this.registry.get('isMusicOn');
+    const musicBtn = this.add.image(toggleX, musicY, isMusicOn ? "toggleOn" : "toggleOff")
+        .setScale(0.75);
+    musicBtn.setInteractive();
 
-      musicBtn.on('pointerdown', () => {
-         const newState = !this.registry.get('isMusicOn');
-         this.registry.set('isMusicOn', newState);
-         musicBtn.setTexture(newState ? "toggleOn" : "toggleOff");
-         this.sound.mute = !newState; 
-      });
-      settingContainer.add(musicBtn);
-   }
+    musicBtn.on('pointerdown', () => {
+        const newState = !this.registry.get('isMusicOn');
+        this.registry.set('isMusicOn', newState);
+        musicBtn.setTexture(newState ? "toggleOn" : "toggleOff");
+        this.sound.mute = !newState; 
+    });
+    settingContainer.add(musicBtn);
+
+    // --- ▼▼▼ TOMBOL KEMBALI (BARU DITAMBAHKAN) ▼▼▼ ---
+    
+    // Tentukan posisi Y di bawah tombol musik
+    // (centerY + 180 adalah estimasi, sesuaikan biar pas di desain panelmu)
+    const kembaliBtn = this.add.image(panelX - 1000, centerY - 380, "kembali_"); 
+    kembaliBtn.setInteractive();
+
+    // Event Hover (Membesar)
+    kembaliBtn.on('pointerover', () => {
+        this.tweens.add({
+            targets: kembaliBtn,
+            scale: 1.05, // Sesuaikan jika scale awal bukan 1
+            duration: 100,
+            ease: 'Power1'
+        });
+    });
+
+    // Event Out (Mengecil)
+    kembaliBtn.on('pointerout', () => {
+        this.tweens.add({
+            targets: kembaliBtn,
+            scale: 1.0, // Kembali ke ukuran normal
+            duration: 100,
+            ease: 'Power1'
+        });
+    });
+
+    // Event Klik (Pindah ke Home)
+    kembaliBtn.on('pointerdown', () => {
+        // Tidak perlu destroy container karena scene akan berganti
+        this.scene.start('home'); 
+    });
+
+    // PENTING: Masukkan ke dalam container
+    settingContainer.add(kembaliBtn);
+    }
 
    /* END-USER-CODE */
 }

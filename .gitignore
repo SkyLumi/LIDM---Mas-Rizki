@@ -4,3 +4,5 @@ face_recognition_models
 face_recognition
 __pycache__
 .vscode
+static/config.js
+!static/encodings/.gitkeep
