@@ -1,123 +1,147 @@
+import { API_BASE_URL } from '../../config.js'; // 1. WAJIB IMPORT
+
 export class Result extends Phaser.Scene {
     constructor() {
-        super('Result')
-
-        // this.levelMap = {
-        //     'Level1': 'Level2',
-        //     'Level2': 'Level3',
-        //     'Level3': 'MainMenu'
-        // };
-
-        this.finalScore = 0;
+        super('Result');
     }
 
     init(data) {
-        this.finalScore = data.score;
-        // this.gameSceneKey = data.gameSceneKey;
+        this.score = data.score || 0;
+        this.stars = data.stars || 0;
+        this.levelCompleted = data.levelCompleted || false;
+        
+        // Ambil Key Level sebelumnya (Penting buat matikan scene biar gak freeze)
+        this.previousLevelKey = data.levelKey || 'Level1'; 
+        
+        // 2. WAJIB AMBIL DATA ANALYTICS DARI SINI
+        this.analyticsReport = data.analyticsReport; 
     }
 
     create() {
-        const { width, height } = this.sys.game.config
+        const { width, height } = this.sys.game.config;
+        const screenCenterX = width / 2;
+        const screenCenterY = height / 2;
 
-        let screenCenterX = width / 2
-        let screenCenterY = height / 2
+        // 1. Overlay
+        this.add.rectangle(screenCenterX, screenCenterY, width, height, 0x000000, 0.7)
+            .setInteractive();
 
-        this.add.rectangle(screenCenterX, screenCenterY, width, height, 0x000000, 0.5)
-            .setInteractive()
-            .on('pointerdown', () => {});
+        // 2. Panel Bintang
+        const panelKey = `result-${this.stars}star`;
+        this.add.image(screenCenterX, screenCenterY - 195, panelKey).setScale(1.0);
+        
+        // 3. Judul
+        const titleKey = this.levelCompleted ? 'textWin' : 'textLose';
+        this.add.image(screenCenterX, screenCenterY - 160, titleKey).setScale(0.8);
 
-        this.add.image(screenCenterX, 0, 'gameOverPanel')
-            .setOrigin(0.5, 0)
-            .setScale(1.4)
+        // 4. Score
+        const scoreY = screenCenterY + 20; 
+        const scoreContainer = this.add.container(screenCenterX, scoreY);
 
-        let bintangContainer = this.add.container(screenCenterX, 230)
-
-        const bintang1 = this.add.image(-110, 10, 'bintang')
-            .setScale(0.8)
-
-        const bintang2 = this.add.image(0, 0, 'bintang')
-            .setScale(0.9)
-
-        const bintang3 = this.add.image(110, 10, 'bintang')
-            .setScale(0.8)
-
-        bintangContainer.add([bintang1, bintang2, bintang3])
-
-        this.add.text(screenCenterX, 500, 'KERJA BAGUS!', {
-            fontFamily: 'lilita-one',
-            fontSize: '72px',
-            fill: '#ffffff'
-        }).setOrigin(0.5)
-
-        let scoreTextContainer = this.add.container(screenCenterX - 230, 560)
-
-        const scoreText = this.add.text(0, 0, 'Score :', {
-            fontFamily: 'raleway',
-            fontSize: '48px',
-            fill: '#ffffff',
-            fontStyle: 'bold'
+        const scoreLabel = this.add.image(0, -60, 'Score').setScale(0.9).setOrigin(1, 0.5); 
+        const scoreValue = this.add.text(20, -60, `${this.score}`, {
+            fontFamily: 'LilitaOne', fontSize: "64px", color: "#FFFFFF"
         })
+        .setOrigin(0, 0.5)
+        .setShadow(3, 3, "#7A0806", 0, true, true);
 
-        let scoreNumber = this.add.text(460, 0, '0', {
-            fontFamily: 'raleway',
-            fontSize: '48px',
-            fill: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(1, 0)
+        scoreLabel.x = -40; 
+        scoreValue.x = 60;
+        scoreContainer.add([scoreLabel, scoreValue]);
 
-        scoreNumber.setText(this.finalScore)
-        scoreTextContainer.add([scoreText, scoreNumber])
+        // 5. Logic Tombol
+        let buttonsToShow = [];
+        buttonsToShow.push('home');
+        buttonsToShow.push('retry');
 
-        let scoopTextContainer = this.add.container(screenCenterX - 230, 620)
+        if (this.levelCompleted && this.previousLevelKey !== 'Level3') {
+            buttonsToShow.push('next');
+        }
 
-        const scoopText = this.add.text(0, 0, 'Scoops :', {
-            fontFamily: 'raleway',
-            fontSize: '48px',
-            fill: '#ffffff',
-            fontStyle: 'bold'
-        })
+        // --- Render Tombol ---
+        const btnY = screenCenterY + 110; 
+        const btnGap = 200; 
+        
+        let startX = screenCenterX - ((buttonsToShow.length - 1) * btnGap) / 2;
 
-        let scoopNumber = this.add.text(460, 0, '0', {
-            fontFamily: 'raleway',
-            fontSize: '48px',
-            fill: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(1, 0)
+        buttonsToShow.forEach((btnType, index) => {
+            let btnKey = '';
+            let onClick = null;
+            let baseScale = 0.75; 
 
-        scoopNumber.setText(this.finalScore / 10)
-        scoopTextContainer.add([scoopText, scoopNumber])
+            if (btnType === 'home') {
+                btnKey = 'home-btn';
+                // GUNAKAN stopGameAndGo BIAR GAK FREEZE
+                onClick = () => this.stopGameAndGo('MainMenu');
+            } else if (btnType === 'retry') {
+                btnKey = 'retry-btn';
+                onClick = () => this.stopGameAndGo(this.previousLevelKey);
+            } else if (btnType === 'next') {
+                btnKey = 'next_stage'; 
+                baseScale = 0.97; 
+                onClick = () => {
+                    const currentNum = parseInt(this.previousLevelKey.replace('Level', ''));
+                    const nextLevelKey = `Level${currentNum + 1}`;
+                    this.stopGameAndGo(nextLevelKey);
+                };
+            }
 
-        let panelContainer = this.add.container(screenCenterX, screenCenterY + 250)
+            // Buat Tombol
+            const button = this.add.image(startX + (index * btnGap), btnY, btnKey)
+                .setInteractive()
+                .setScale(baseScale); 
 
-        const menuButton = this.add.image(-200, 0, 'panelHome')
-            .setInteractive()
-            .setScale(3)
-
-        menuButton.on('pointerdown', () => {
-            this.scene.stop()
-            // this.scene.stop(this.gameSceneKey )
-            this.scene.start('MainMenu')
+            button.on('pointerdown', onClick);
+            button.on('pointerover', () => button.setScale(baseScale + 0.05));
+            button.on('pointerout', () => button.setScale(baseScale));
         });
 
-        const nextLevelButton = this.add.image(200, 0, 'panelNextLevel')
-            .setInteractive()
-            .setScale(3)
+        // 6. KIRIM API (PINDAHKAN KELUAR LOOP AGAR CUMA JALAN SEKALI)
+        if (this.levelCompleted && this.analyticsReport) {
+            console.log("Syarat terpenuhi, mengirim Analitik...", this.analyticsReport);
+            this.sendAnalyticsToAPI(this.analyticsReport);
+        } else {
+            console.log("Data tidak dikirim (Kalah atau Data Kosong).");
+        }
+    }
 
-        nextLevelButton.on('pointerdown', () => {
-            // let nextLevel = this.levelMap[this.gameSceneKey]
-            // this.scene.start(nextLevel)
-        });
+    // --- FUNGSI NAVIGASI BERSIH (Supaya Gak Double Asset) ---
+    stopGameAndGo(targetScene) {
+        console.log(`Navigasi: Stop ${this.previousLevelKey} -> Start ${targetScene}`);
+        
+        // 1. Matikan Scene Result ini
+        this.scene.stop('Result');
+        
+        // 2. Matikan Scene Game Level di belakangnya (WAJIB)
+        this.scene.stop(this.previousLevelKey);
+        
+        // 3. Baru mulai scene tujuan
+        this.scene.start(targetScene);
+    }
 
-        const restartButton = this.add.image(0, 0, 'panelRestart')
-            .setInteractive()
-            .setScale(3)
+    async sendAnalyticsToAPI(data) {
+        const apiEndpoint = `${API_BASE_URL}/v1/analytics/save`; 
 
-        restartButton.on('pointerdown', () => {
-            this.scene.stop()
-            // this.scene.stop(this.gameSceneKey )
-            // this.scene.start(this.gameSceneKey )
-        });
+        console.log('Sedang POST data ke:', apiEndpoint);
 
-        panelContainer.add([menuButton,restartButton,nextLevelButton])
+        try {
+            const response = await fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('API Sukses Terkirim:', result);
+
+        } catch (error) {
+            console.error('API Gagal Nembak:', error);
+        }
     }
 }

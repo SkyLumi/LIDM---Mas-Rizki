@@ -37,11 +37,6 @@ const config = {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    plugins: {
-        global: [
-        { key: 'SceneWatcher', plugin: PhaserSceneWatcherPlugin, start: true }
-        ]
-    },
 }
 
 const game = new Phaser.Game(config)

@@ -48,7 +48,7 @@ export class LevelMenu extends Phaser.Scene {
       });
 
       const idProfil = this.registry.get('currentMuridId');
-      const namaGame = "GELEMBUNG";
+      const namaGame = "GELEMBUNG AJAIB";
 
       if (!idProfil) {
           console.error("ID Profil tidak ditemukan, menggunakan default unlock.");
@@ -90,12 +90,12 @@ export class LevelMenu extends Phaser.Scene {
                this.sound.play('sfxLevelButtonHover');
             }
             button.setTexture(selectedTexture);
-            button.setScale(0.45);
+            // button.setScale(0.45);
          });
 
          button.on('pointerout', () => {
             button.setTexture(unselectedTexture);
-            button.setScale(0.4);
+            // button.setScale(0.4);
          });
 
          button.on('pointerdown', () => {

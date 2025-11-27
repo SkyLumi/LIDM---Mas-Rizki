@@ -6,11 +6,15 @@ services:
       - "5000:5000"
     environment:
       - FLASK_APP=app.py
-      - FLASK_ENV=production
+      - FLASK_ENV=production 
       - DATABASE_URL=postgresql://admin:admin123@db:5432/cloudsup
     depends_on:
       - db 
     restart: unless-stopped
+    volumes:
+      - ./static/encodings:/app/static/encodings
+      - .:/app
+     
     networks:
       - app-network
 

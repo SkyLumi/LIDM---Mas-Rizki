@@ -953,7 +953,7 @@ export default class game extends Phaser.Scene {
          const analyticsReport = {
              id_profil: muridId,
              id_games_dashboard: 4,
-             level: this.currentLevel,
+             level: `level${this.currentLevel}`,
              win: isWin,
              totalPlayTimeSeconds: totalPlayTime,
              metrics: {
