@@ -20,9 +20,14 @@ export default class Game extends Phaser.Scene {
       this.tutorialContainer = null
       this.pauseContainer = null
 
+      this.analytics = null;
+
       this.maxBubbleCount = 1;
       this.bubbleTypes = ['blue', 'purple'];
       this.baseSpeed = 1.0;
+      
+      // Variable untuk tween score
+      this.scoreFillTween = null;
    }
 
    init(data) {
@@ -100,12 +105,12 @@ export default class Game extends Phaser.Scene {
       }
       
       this.analytics = {
-         gameStartTime: this.time.now, // Catet waktu mulai
-         totalFrames: 0,   // Total frame game
-         handLossFrames: 0, // Total frame waktu tangan hilang
-         heatmapData: [],   // nampung data heatmap (x, y, t)
+         gameStartTime: this.time.now, 
+         totalFrames: 0,   
+         handLossFrames: 0, 
+         heatmapData: [],   
          reactionTimes: [],
-         missedBubbles: 0 // Tambahan untuk hitung koordinasi
+         missedBubbles: 0
       };
 
       //    Bubble Group      //
@@ -144,6 +149,9 @@ export default class Game extends Phaser.Scene {
 
       //    Score Panel   //
       this.scoreFillImage = this.add.image(width - 165, 820, 'scoreFill').setScale(0.3)
+      // *** MODIFIKASI: Inisialisasi posisi persentase fill untuk animasi ***
+      this.scoreFillImage.displayedPerc = 0; 
+      
       this.add.image(width - 180, 620, 'scorePanel').setScale(0.64)
 
       this.scoreFillImage.setOrigin(0.5, 1.0);
@@ -154,7 +162,7 @@ export default class Game extends Phaser.Scene {
             fill: '#045170' 
       }).setOrigin(0.5);
 
-      this.updateScoreUI()
+      this.updateScoreUI() // Panggil sekali untuk set posisi awal
 
       this.pauseButton = this.add.image(170, 900, 'pauseButton')
       .setScale(0.47)
@@ -225,7 +233,6 @@ export default class Game extends Phaser.Scene {
                if (this.selectedLevel > 1) {
                   this.loseLife();
                }
-               // Tambahkan counter missed bubbles untuk hitung koordinasi
                this.analytics.missedBubbles++;
             }
             bubble.destroy();
@@ -247,6 +254,7 @@ export default class Game extends Phaser.Scene {
       }
    }
 
+   // *** MODIFIKASI: Method updateScoreUI dengan Tween Animasi ***
    updateScoreUI() {
       if (this.score < 0) this.score = 0;
       
@@ -257,46 +265,62 @@ export default class Game extends Phaser.Scene {
          
          const star1_VisualY = 0.5;
          const star2_VisualY = 0.7;
-         
          const slowZoneVisualCap = 0.80; 
 
          const scoreStar1 = 800;
          const scoreStar2 = 1400;
          const scoreJump  = 2000;
-         const scoreMax   = 2000;
 
-         let visualPercentage = 0;
+         // Hitung Target Persentase
+         let targetPercentage = 0;
          let t = 0;
 
          if (this.score >= scoreJump) {
-            visualPercentage = 1.0; 
+            targetPercentage = 1.0; 
          } 
          else if (this.score <= scoreStar1) {
             t = this.score / scoreStar1;
-            visualPercentage = Phaser.Math.Linear(0, star1_VisualY, t);
+            targetPercentage = Phaser.Math.Linear(0, star1_VisualY, t);
          }
          else if (this.score <= scoreStar2) {
             t = (this.score - scoreStar1) / (scoreStar2 - scoreStar1);
-            visualPercentage = Phaser.Math.Linear(star1_VisualY, star2_VisualY, t);
+            targetPercentage = Phaser.Math.Linear(star1_VisualY, star2_VisualY, t);
          }
          else {
             t = (this.score - scoreStar2) / (scoreJump - scoreStar2);
-            visualPercentage = Phaser.Math.Linear(star2_VisualY, slowZoneVisualCap, t);
+            targetPercentage = Phaser.Math.Linear(star2_VisualY, slowZoneVisualCap, t);
          }
          
-         visualPercentage = Phaser.Math.Clamp(visualPercentage, 0, 1);
+         targetPercentage = Phaser.Math.Clamp(targetPercentage, 0, 1);
          
-         const originalHeight = this.scoreFillImage.texture.getSourceImage().height;
-         const originalWidth = this.scoreFillImage.texture.getSourceImage().width;
-         const cropHeight = originalHeight * visualPercentage;
-         const cropY = originalHeight - cropHeight;
+         // Jalankan Tween Animasi pada Fill
+         if (this.scoreFillTween) {
+            this.scoreFillTween.stop();
+         }
 
-         this.scoreFillImage.setCrop(
-            0, 
-            cropY,   
-            originalWidth,
-            cropHeight   
-         );
+         this.scoreFillTween = this.tweens.add({
+            targets: this.scoreFillImage,
+            displayedPerc: targetPercentage,
+            duration: 500, // 0.5 detik durasi animasi
+            ease: 'Cubic.Out',
+            onUpdate: () => {
+               if(!this.scoreFillImage || !this.scoreFillImage.active) return;
+
+               const currentPerc = this.scoreFillImage.displayedPerc;
+               const originalHeight = this.scoreFillImage.texture.getSourceImage().height;
+               const originalWidth = this.scoreFillImage.texture.getSourceImage().width;
+               
+               const cropHeight = originalHeight * currentPerc;
+               const cropY = originalHeight - cropHeight;
+
+               this.scoreFillImage.setCrop(
+                  0, 
+                  cropY,   
+                  originalWidth,
+                  cropHeight   
+               );
+            }
+         });
       }
       
       if (this.score >= this.maxScore && this.gameState === 'PLAYING') {
@@ -340,24 +364,48 @@ export default class Game extends Phaser.Scene {
       });
    }
 
+   // *** MODIFIKASI: Animasi Countdown 3-2-1 yang lebih menarik ***
    startCountdown() {
       this.gameState = 'COUNTDOWN';
       const { width, height } = this.sys.game.config;
 
-      const countdownImg = this.add.image(width / 2, height / 2, 'three')
-         .setOrigin(0.6)
-         .setScale(1);
+      // Variable untuk menyimpan sprite countdown yang sedang aktif
+      let currentCountSprite = null;
 
-      this.time.delayedCall(1000, () => {
-         countdownImg.setTexture('two');
-      });
+      // Fungsi helper untuk animasi angka
+      const showCount = (textureKey, delay) => {
+         this.time.delayedCall(delay, () => {
+            
+            // Hapus angka sebelumnya jika ada
+            if (currentCountSprite) {
+               currentCountSprite.destroy();
+            }
 
-      this.time.delayedCall(2000, () => {
-         countdownImg.setTexture('one');
-      });
+            // Buat angka baru
+            currentCountSprite = this.add.image(width / 2, height / 2, textureKey)
+               .setOrigin(0.5)
+               .setScale(0); // Mulai dari kecil (0)
 
+            // Mainkan tween pop-up
+            this.tweens.add({
+               targets: currentCountSprite,
+               scale: 1, // Membesar ke ukuran normal
+               duration: 600,
+               ease: 'Back.out' // Efek membal sedikit
+            });
+         });
+      };
+
+      // Jadwalkan animasi
+      showCount('three', 0);
+      showCount('two', 1000);
+      showCount('one', 2000);
+
+      // Selesai countdown
       this.time.delayedCall(3000, () => {
-         countdownImg.destroy();
+         if (currentCountSprite) {
+            currentCountSprite.destroy();
+         }
          this.analytics.gameStartTime = this.time.now;
          this.startGame();
       });
@@ -400,6 +448,11 @@ export default class Game extends Phaser.Scene {
             bubbleTweens.forEach(tween => tween.pause());
          }
       });  
+
+      // Pause juga tween animasi score jika sedang jalan
+      if(this.scoreFillTween && this.scoreFillTween.isPlaying()) {
+         this.scoreFillTween.pause();
+      }
 
       if (this.countdownEvent) this.countdownEvent.paused = true;
       if (this.bubbleSpawnEvent) this.bubbleSpawnEvent.paused = true;
@@ -548,6 +601,11 @@ export default class Game extends Phaser.Scene {
          }
       });
 
+      // Resume tween score
+      if(this.scoreFillTween && this.scoreFillTween.isPaused()) {
+         this.scoreFillTween.resume();
+      }
+
       if (this.countdownEvent) this.countdownEvent.paused = false;
       if (this.bubbleSpawnEvent) this.bubbleSpawnEvent.paused = false;
 
@@ -604,6 +662,8 @@ export default class Game extends Phaser.Scene {
          if (bubble.body) bubble.body.stop();
       });
       
+      if(this.scoreFillTween) this.scoreFillTween.stop();
+
       this.handEffectGroup.clear(true, true);
       Object.keys(this.handEffect).forEach(label => {
          delete this.handEffect[label]; 
@@ -629,7 +689,6 @@ export default class Game extends Phaser.Scene {
       }
 
       // 3. Koordinasi (Akurasi Pecah Gelembung)
-      // Rumus: (Jumlah Pecah / (Jumlah Pecah + Jumlah Lewat)) * 100
       const poppedCount = reactionTimes.length;
       const missedCount = this.analytics.missedBubbles;
       const totalInteraction = poppedCount + missedCount;
@@ -638,7 +697,6 @@ export default class Game extends Phaser.Scene {
       if (totalInteraction > 0) {
          skorKoordinasi = (poppedCount / totalInteraction) * 100;
       } else {
-         // Jika tidak ada interaksi sama sekali tapi menang (misal level kosong?) set 100, kalau kalah 0
          skorKoordinasi = isWin ? 100 : 0;
       }
 
@@ -648,14 +706,14 @@ export default class Game extends Phaser.Scene {
       const analyticsReport = {
          id_profil: muridId || "guest_unknown",
          id_games_dashboard: 1, // ID untuk Game Gelembung
-         level: this.selectedLevel,
+         level: `level${this.selectedLevel}`,
          finalScore: this.score,
          win: isWin,
          totalPlayTimeSeconds: totalPlayTimeMs / 1000,
          metrics: {
              fokus: skorFokus.toFixed(1),
              koordinasi: skorKoordinasi.toFixed(1),
-             waktuReaksi: avgReactionTime.toFixed(0) // ms (tanpa koma)
+             waktuReaksi: avgReactionTime.toFixed(0) 
          },
          rawHeatmap: this.analytics.heatmapData
       };
@@ -926,5 +984,6 @@ export default class Game extends Phaser.Scene {
       this.mediapipe.destroy()
       if (this.countdownEvent) this.countdownEvent.remove();
       if (this.bubbleSpawnEvent) this.bubbleSpawnEvent.remove();
+      if (this.scoreFillTween) this.scoreFillTween.stop();
    }
 }
