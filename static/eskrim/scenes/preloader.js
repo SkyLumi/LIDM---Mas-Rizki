@@ -8,6 +8,10 @@ export class Preloader extends Phaser.Scene {
         this.load.font('lilita-one', 'static/assets/font/LilitaOne-Regular.ttf', 'truetype')
         this.load.font('raleway', 'static/assets/font/Raleway-Regular.ttf', 'truetype')
 
+        // ----             Fullscreen              ----
+        this.load.image('fullscreen_icon', 'static/assets/img/fullscreen.png');
+        this.load.image('minimize_icon', 'static/assets/img/minimize.png');
+
         // ----             Main Menu               ----
         this.load.image('menuBG', 'static/assets/eskrim_img/mainMenuPage.png')
         this.load.image('titleBox', 'static/assets/eskrim_img/title-box.png')
@@ -88,6 +92,7 @@ export class Preloader extends Phaser.Scene {
     }
 
     create() {
+        this.scene.launch('UIScene');
         this.scene.start('MainMenu')
     }
 }

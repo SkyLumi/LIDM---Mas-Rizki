@@ -1,4 +1,5 @@
 import { Preloader } from "./scenes/preloader.js";
+import { UIScene } from "./scenes/uiscene.js";
 import { MainMenu } from "./scenes/mainMenu.js";
 import { LevelMenu } from "./scenes/levelMenu.js";
 import { Result } from "./scenes/result.js";
@@ -31,7 +32,8 @@ const config = {
         Level2,
         Level3,
         Pause,
-        Result
+        Result,
+        UIScene
     ],
     scale: {
         mode: Phaser.Scale.FIT,

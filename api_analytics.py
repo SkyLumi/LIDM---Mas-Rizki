@@ -3,8 +3,6 @@ import json
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func 
 import datetime
-
-# --- ▼▼▼ INI YANG BARU ▼▼▼ ---
 from extensions import db
 from models import GameAktual, Laporan, Profil, GamesDashboard
 from api_auth import guru_required
@@ -136,92 +134,267 @@ def calculate_hand_dominance(raw_heatmap):
     right_percent = round((right_count / total) * 100, 1)
     return {"left_percent": left_percent, "right_percent": right_percent}
 
-# api_analytics.py (di paling bawah)
-
-@analytics_bp.route('/analytics/profil/<int:id_profil>/weekly', methods=['GET'])
-@guru_required # <-- "Bouncer" Jaga
-def get_weekly_analytics(id_profil):
+def calculate_period_stats(id_profil, start_date, end_date):
     """
-    API (HANYA GURU) untuk MENG-AMBIL (GET) RATA-RATA skill
-    murid 'id_profil' DALAM MINGGU INI.
+    Helper untuk menghitung rata-rata skor, heatmap grid, dan hand usage
+    dalam rentang waktu tertentu (start_date s/d end_date).
     """
     
-    try:
-        # --- 1. JURUS KEAMANAN (WAJIB) ---
-        # (Guru "SLB A" gak boleh "ngintip" murid "SLB B")
-        profil_murid = db.session.get(Profil, id_profil)
-        if not profil_murid:
-            return jsonify({"status": "gagal", "message": "Murid tidak ditemukan."}), 404
+    # ==========================================
+    # 1. QUERY SKILL SCORES (RATA-RATA 6 SKILL)
+    # ==========================================
+    avg_query = db.select(
+        func.avg(Laporan.fokus).label('fokus'),
+        func.avg(Laporan.koordinasi).label('koordinasi'),
+        func.avg(Laporan.waktu_reaksi).label('waktu_reaksi'),
+        func.avg(Laporan.keseimbangan).label('keseimbangan'),
+        func.avg(Laporan.ketangkasan).label('ketangkasan'),
+        func.avg(Laporan.memori).label('memori')
+    ).join(GameAktual, Laporan.id_sesi == GameAktual.id_sesi).where(
+        GameAktual.id_profil == id_profil,
+        func.date(GameAktual.waktu_main) >= start_date,
+        func.date(GameAktual.waktu_main) <= end_date
+    )
+    scores = db.session.execute(avg_query).first()
 
-        guru_id_pengguna = session.get('user_id')
-        profil_guru = db.session.scalar(
-            db.select(Profil).where(Profil.id_pengguna == guru_id_pengguna)
-        )
-        
-        if not profil_guru or profil_murid.id_sekolah != profil_guru.id_sekolah:
-            return jsonify({"status": "gagal", "message": "Akses ditolak."}), 403
+    # Ambil nilai skill (Handle None jadi 0)
+    val_fokus = float(scores.fokus) if scores.fokus else 0
+    val_koordinasi = float(scores.koordinasi) if scores.koordinasi else 0
+    val_keseimbangan = float(scores.keseimbangan) if scores.keseimbangan else 0
+    val_ketangkasan = float(scores.ketangkasan) if scores.ketangkasan else 0
+    val_memori = float(scores.memori) if scores.memori else 0
+    val_waktu_reaksi = float(scores.waktu_reaksi) if scores.waktu_reaksi else 0 # Satuan ms
 
-        # --- 2. JURUS NGITUNG "MINGGU INI" ---
-        today = datetime.date.today()
-        # (Senin = 0, Minggu = 6)
-        start_of_week = today - datetime.timedelta(days=today.weekday())
-        end_of_week = start_of_week + datetime.timedelta(days=6)
-        
-        # (Bikin jadi 'datetime' biar bisa dibandingin sama DB)
-        start_dt = datetime.datetime.combine(start_of_week, datetime.time.min) # Senin 00:00
-        end_dt = datetime.datetime.combine(end_of_week, datetime.time.max) # Minggu 23:59
+    # ==========================================
+    # 2. HITUNG PERIOD AVERAGE (SKALA 0-100)
+    # ==========================================
+    # Kita harus menormalisasi Waktu Reaksi (ms) menjadi Skor (0-100)
+    # Rumus: 0ms = 100 poin, 10.000ms = 0 poin
+    score_reaksi_norm = 0
+    if val_waktu_reaksi > 0:
+        score_reaksi_norm = max(0, min(100, ((10000 - val_waktu_reaksi) / 10000) * 100))
 
-        # --- 3. "JURUS JAGO" (Suruh SQL ngitung AVG) ---
-        # (Kita "ngintip" 'Laporan', 'JOIN' ke 'GameAktual' buat "filter"
-        #  tanggal dan 'id_profil')
-        
-        avg_query = db.select(
-            func.avg(Laporan.fokus).label('fokus'),
-            func.avg(Laporan.koordinasi).label('koordinasi'),
-            func.avg(Laporan.waktu_reaksi).label('waktu_reaksi'),
-            func.avg(Laporan.keseimbangan).label('keseimbangan'),
-            func.avg(Laporan.ketangkasan).label('ketangkasan'),
-            func.avg(Laporan.memori).label('memori')
-        ).join(GameAktual).where(
-            GameAktual.id_profil == id_profil, # 1. Cuma murid ini
-            GameAktual.waktu_main.between(start_dt, end_dt) # 2. Cuma minggu ini
-        )
+    # Hitung Rata-rata dari 6 Skill
+    # Jika belum ada data sama sekali (semua 0), hasil avg 0
+    total_skill = val_fokus + val_koordinasi + val_keseimbangan + val_ketangkasan + val_memori + score_reaksi_norm
+    period_avg = round(total_skill / 6, 1)
 
-        # "Jalanin" query-nya
-        results = db.session.execute(avg_query).first()
+
+    # ==========================================
+    # 3. QUERY GAME BREAKDOWN (UNTUK CHART HORIZONTAL)
+    # ==========================================
+    game_skill_query = db.select(
+        GamesDashboard.nama_game,
+        func.avg(Laporan.fokus).label('fokus'),
+        func.avg(Laporan.koordinasi).label('koordinasi'),
+        func.avg(Laporan.waktu_reaksi).label('waktu_reaksi'),
+        func.avg(Laporan.keseimbangan).label('keseimbangan'),
+        func.avg(Laporan.ketangkasan).label('ketangkasan'),
+        func.avg(Laporan.memori).label('memori')
+    ).join(GameAktual, Laporan.id_sesi == GameAktual.id_sesi)\
+     .join(GamesDashboard, GameAktual.id_games_dashboard == GamesDashboard.id_games_dashboard)\
+     .where(
+        GameAktual.id_profil == id_profil,
+        func.date(GameAktual.waktu_main) >= start_date,
+        func.date(GameAktual.waktu_main) <= end_date
+    ).group_by(GamesDashboard.nama_game)
+    
+    game_results = db.session.execute(game_skill_query).all()
+
+    game_breakdown = {}
+    game_skills_detailed = {}
+
+    for row in game_results:
+        nama = row.nama_game # Pastikan nama di DB sesuai (Case Sensitive)
         
-        # --- 4. "BUNGKUS" JADI JSON ---
-        # (Hasil 'results' itu misal: (Decimal('80.5'), Decimal('70.2'), None, ...))
-        # (Kita "bersihin" jadi JSON yang 'jago')
-        averages = {
-            'fokus': float(results.fokus) if results.fokus else 0,
-            'koordinasi': float(results.koordinasi) if results.koordinasi else 0,
-            'waktu_reaksi': float(results.waktu_reaksi) if results.waktu_reaksi else 0,
-            'keseimbangan': float(results.keseimbangan) if results.keseimbangan else 0,
-            'ketangkasan': float(results.ketangkasan) if results.ketangkasan else 0,
-            'memori': float(results.memori) if results.memori else 0,
+        # Ambil nilai raw (handle None)
+        fokus = float(row.fokus) if row.fokus else 0
+        koor = float(row.koordinasi) if row.koordinasi else 0
+        keseimbangan = float(row.keseimbangan) if row.keseimbangan else 0
+        ketangkasan = float(row.ketangkasan) if row.ketangkasan else 0
+        memori = float(row.memori) if row.memori else 0
+        waktu_reaksi_ms = float(row.waktu_reaksi) if row.waktu_reaksi else 0
+
+        # Normalisasi Waktu Reaksi (ms -> 0-100)
+        reaksi_score = 0
+        if waktu_reaksi_ms > 0:
+            reaksi_score = max(0, min(100, ((10000 - waktu_reaksi_ms) / 10000) * 100))
+
+        final_score = 0
+
+        # === RESEP PENILAIAN PER GAME (SESUAI GAMBAR) ===
+        # Gunakan .lower() biar aman kalau di DB tulisannya "Gelembung Ajaib" atau "gelembung ajaib"
+        name_lower = nama.lower()
+
+        if "gelembung" in name_lower or "tangkap" in name_lower:
+            # Resep: Fokus, Koor Tangan Mata, Waktu Reaksi, Ketangkasan
+            # Pembagi: 4
+            final_score = (fokus + koor + reaksi_score + ketangkasan) / 4
+        
+        elif "papan" in name_lower: # Papan seimbang
+            # Resep: Fokus, Koor Tangan Mata, Keseimbangan
+            # Pembagi: 3
+            final_score = (fokus + koor + keseimbangan) / 3
+            
+        elif "kartu" in name_lower or "cocok" in name_lower:
+            # Resep: Memori
+            # Pembagi: 1
+            final_score = memori
+        
+        else:
+            # Default kalau ada game baru (rata-rata semua)
+            final_score = (fokus + koor + reaksi_score + keseimbangan + ketangkasan + memori) / 6
+
+        # Simpan ke dictionary (Round 1 desimal)
+        game_breakdown[nama] = round(final_score, 1)
+
+        game_skills_detailed[nama] = {
+            "fokus": round(fokus, 1),
+            "koordinasi": round(koor, 1),
+            "keseimbangan": round(keseimbangan, 1),
+            "ketangkasan": round(ketangkasan, 1),
+            "memori": round(memori, 1),
+            "waktu_reaksi": round(reaksi_score, 1), # Udah dikonversi 0-100
+            "waktu_reaksi_ms": round(waktu_reaksi_ms, 1) # Raw data
         }
 
+
+    # ==========================================
+    # 4. QUERY META (TOTAL MAIN & DURASI)
+    # ==========================================
+    meta_query = db.select(
+        func.count(GameAktual.id_sesi).label('total_main'),
+        func.sum(GameAktual.waktu_durasi_detik).label('total_durasi')
+    ).where(
+        GameAktual.id_profil == id_profil,
+        func.date(GameAktual.waktu_main) >= start_date,
+        func.date(GameAktual.waktu_main) <= end_date
+    )
+    meta_stats = db.session.execute(meta_query).first()
+
+    total_games = meta_stats.total_main if meta_stats.total_main else 0
+    total_seconds = meta_stats.total_durasi if meta_stats.total_durasi else 0
+    total_minutes = round(total_seconds / 60)
+
+
+    # ==========================================
+    # 5. QUERY HEATMAP & HAND USAGE
+    # ==========================================
+    heatmap_query = db.select(Laporan.heatmap).join(GameAktual, Laporan.id_sesi == GameAktual.id_sesi).where(
+        GameAktual.id_profil == id_profil,
+        func.date(GameAktual.waktu_main) >= start_date,
+        func.date(GameAktual.waktu_main) <= end_date,
+        Laporan.heatmap.isnot(None)
+    )
+    heatmaps = db.session.execute(heatmap_query).scalars().all()
+
+    final_grid = [[0.0 for _ in range(4)] for _ in range(4)]
+    total_left, total_right = 0.0, 0.0
+    count = 0
+
+    for h in heatmaps:
+        if not h: continue
+        grid = h.get('grid')
+        if grid and len(grid) == 4:
+            count += 1
+            for r in range(4):
+                for c in range(4):
+                    final_grid[r][c] += float(grid[r][c])
+        
+        dom = h.get('dominance', {})
+        total_left += float(dom.get('left_percent', 0))
+        total_right += float(dom.get('right_percent', 0))
+
+    avg_left, avg_right = 0, 0
+    if count > 0:
+        for r in range(4):
+            for c in range(4):
+                final_grid[r][c] = round(final_grid[r][c] / count, 1)
+        avg_left = round(total_left / count, 1)
+        avg_right = round(total_right / count, 1)
+
+
+    # ==========================================
+    # 6. RETURN HASIL AKHIR
+    # ==========================================
+    return {
+        "scores": {
+            "fokus": round(val_fokus, 1),
+            "ketangkasan": round(val_ketangkasan, 1),
+            "koordinasi": round(val_koordinasi, 1),
+            "keseimbangan": round(val_keseimbangan, 1),
+            "memori": round(val_memori, 1),
+            "waktu_reaksi": round(val_waktu_reaksi, 1), # Kembalikan nilai asli (ms)
+        },
+        "heatmap": final_grid,
+        "hand_usage": {"left": avg_left, "right": avg_right},
+        "meta": {
+            "total_games": total_games,
+            "total_minutes": total_minutes
+        },
+        "game_scores": game_breakdown, # Dictionary skor per game
+        "game_skills": game_skills_detailed,
+        "period_average": period_avg   # Skor Keseluruhan (0-100)
+    }
+
+@analytics_bp.route('/analytics/profil/<int:id_profil>/report/full', methods=['GET'])
+@guru_required
+def get_full_report(id_profil):
+    """
+    Satu API untuk semua kebutuhan Report:
+    1. Overall Bulan Ini (Untuk SkillCard & Tab Overall)
+    2. Breakdown Minggu 1-4 (Untuk Tab Mingguan)
+    """
+    try:
+        # Validasi Profil & Akses Guru
+        profil_murid = db.session.get(Profil, id_profil)
+        if not profil_murid: return jsonify({"status": "gagal", "message": "Murid tidak ditemukan"}), 404
+        
+        guru_id = session.get('user_id')
+        profil_guru = db.session.scalar(db.select(Profil).where(Profil.id_pengguna == guru_id))
+        if not profil_guru or profil_murid.id_sekolah != profil_guru.id_sekolah:
+            return jsonify({"status": "gagal", "message": "Akses ditolak"}), 403
+
+        # Tentukan Bulan Ini
+        today = datetime.date.today()
+        month_start = today.replace(day=1)
+        
+        # Hitung Akhir Bulan
+        if today.month == 12:
+            next_month = today.replace(year=today.year+1, month=1, day=1)
+        else:
+            next_month = today.replace(month=today.month+1, day=1)
+        month_end = next_month - datetime.timedelta(days=1)
+
+        report_data = {}
+
+        # 1. OVERALL (1 Bulan Penuh)
+        # Ini dipake buat SkillCard utama DAN Tab "Keseluruhan" di Detail Card
+        report_data['overall'] = calculate_period_stats(id_profil, month_start, month_end)
+
+        # 2. BREAKDOWN (Minggu 1 - 4)
+        # Asumsi: Minggu dihitung per 7 hari dari tanggal 1
+        for i in range(4):
+            week_start = month_start + datetime.timedelta(days=i*7)
+            week_end = week_start + datetime.timedelta(days=6)
+            
+            if week_start > month_end: break
+            if week_end > month_end: week_end = month_end
+
+            key = f"week{i+1}" # week1, week2, week3, week4
+            report_data[key] = calculate_period_stats(id_profil, week_start, week_end)
+
         return jsonify({
-            "status": "sukses", 
-            "id_profil": id_profil,
-            "range": "weekly",
-            "start_date": start_of_week.isoformat(),
-            "end_date": end_of_week.isoformat(),
-            "data": averages
+            "status": "sukses",
+            "data": report_data
         }), 200
 
     except Exception as e:
-        db.session.rollback()
-        print(f"Gagal get weekly analytics: {e}")
-        return jsonify({"status": "gagal", "message": "Terjadi kesalahan server"}), 500
-
-# api_analytics.py
-
-# ... (import dan fungsi save_analytics di atas) ...
+        print(f"Error full report: {e}")
+        return jsonify({"status": "gagal", "message": "Server Error"}), 500
 
 @analytics_bp.route('/analytics/laporan/<int:id_laporan>', methods=['GET'])
-@guru_required # <-- Aman, cuma Guru yang boleh liat
+@guru_required
 def get_laporan_detail(id_laporan):
     """
     API untuk mengambil detail laporan SATU game,
@@ -304,9 +477,6 @@ def get_game_history(id_profil):
                 'count': row[1],
                 'duration_minutes': round(row[2] / 60) if row[2] else 0
             }
-        # -----------------------------------------------
-
-        # --- ▼▼▼ PERBAIKAN LOGIKA HEATMAP (MULAI DARI SENIN) ▼▼▼ ---
         
         today = datetime.date.today()
         
