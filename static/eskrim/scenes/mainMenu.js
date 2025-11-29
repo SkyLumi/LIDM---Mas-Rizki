@@ -10,7 +10,6 @@ export class MainMenu extends Phaser.Scene {
         this.canvasElement = null;
 
         this.welcomeText = null;
-        this.infoText = null;
         this.playButton = null;
 
         this.currentMuridId = null;
@@ -118,27 +117,11 @@ export class MainMenu extends Phaser.Scene {
         })
 
         this.quitButton.on('pointerdown', () => {
-            this.scene.start('LevelMenu')
+            window.location.href = `${DASHBOARD_BASE_URL}/teacher/games/tangkap-rasa`;
         })
 
-        this.welcomeText = this.add.text(width / 2, 100, 'Selamat Datang!', {
-            fontSize: '48px', fill: '#fff'
-        }).setOrigin(0.5);
-
-        this.infoText = this.add.text(width / 2, 160, 'Mencari wajah...', {
-            fontSize: '24px', fill: '#ffff00'
-        }).setOrigin(0.5);
-
-        // --- 3. Tombol "Daftar" (Gak berubah) ---
-        const registerButton = this.add.text(width / 2, height - 100, 'Daftar Wajah Baru <<', {
-            fontSize: '24px', fill: '#aaa'
-        }).setOrigin(0.5).setInteractive();
+        this.createProfileUI();
         
-        registerButton.on('pointerdown', () => {
-            this.faceMeshManager.stop();
-            this.scene.start('RegisterFace');
-        });
-
         // --- 4. Inisialisasi Face Mesh (Pake Manager) ---
         this.videoElement = document.getElementById('webcam');
         this.canvasElement = document.getElementById('snapshotCanvas');
@@ -153,6 +136,56 @@ export class MainMenu extends Phaser.Scene {
         }
 
         this.events.once('shutdown', this.shutdown, this)
+    }
+
+    createProfileUI() {
+        const { width } = this.sys.game.config;
+        
+        // Ukuran kotak profil
+        const panelWidth = 550;
+        const panelHeight = 180; // Sedikit lebih tinggi untuk 2 baris
+        
+        // Container di pojok kanan atas
+        this.profileContainer = this.add.container(width - panelWidth, 0);
+        this.profileContainer.setDepth(10); 
+
+        const bg = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x084EC5) 
+            .setOrigin(0, 0);
+
+        const labelText = this.add.text(25, 15, "Pemain saat ini", {
+            fontSize: '38px', 
+            fontFamily: 'RalewayBold',
+            color: '#ffffff'
+        });
+
+        const avatarY = 110; 
+        this.profileAvatar = this.add.circle(60, avatarY, 35, 0x00bcd4);
+
+        this.profileNameText = this.add.text(110, avatarY, "...", {
+            fontSize: '40px',
+            fontFamily: 'Raleway',
+            fontStyle: 'bold',
+            color: '#ffffff'
+        }).setOrigin(0, 0.5);
+
+        this.profileContainer.add([bg, labelText, this.profileAvatar, this.profileNameText]);
+
+        // --- ANIMASI TITIK-TITIK MENCARI ---
+        this.dotCount = 0;
+        
+        this.searchingEvent = this.time.addEvent({
+            delay: 500, // Update setiap 0.5 detik
+            loop: true,
+            callback: () => {
+                // Hanya animasi jika sedang SEARCHING
+                if (this.loginState === 'SEARCHING') {
+                    this.dotCount = (this.dotCount + 1) % 4; 
+                    const count = (this.dotCount % 3) + 1;
+                    const dots = ".".repeat(count);
+                    this.profileNameText.setText(dots);
+                }
+            }
+        });
     }
 
     onFaceResults(results) {
@@ -175,7 +208,6 @@ export class MainMenu extends Phaser.Scene {
                     this.attemptLogin(); 
                 } else {
                     // Muka miring
-                    this.infoText.setText('Posisikan wajah lurus ke DEPAN...');
                 }
             }
             
@@ -193,19 +225,16 @@ export class MainMenu extends Phaser.Scene {
                 
                 this.faceMeshManager.stop();
                 this.faceMeshManager = new FaceMeshManager(this.videoElement, this.onFaceResults.bind(this));
-                
-                this.infoText.setText('Kamera di-reset. Mencari wajah...');
-            }
+                            }
         }
     }
 
     async attemptLogin() {
-        this.infoText.setText('Mencocokkan wajah...');
-        
         const imageBase64 = this.takeSnapshot();
         if (!imageBase64 || imageBase64 === 'data:,') {
-            this.infoText.setText('Gagal ambil foto. Coba lagi.');
-            this.loginState = 'SEARCHING';
+            this.profileNameText.setText('Gagal foto...');
+            this.profileNameText.setFontSize('24px');
+            this.loginState = 'SEARCHING'; 
             return;
         }
         
@@ -219,35 +248,51 @@ export class MainMenu extends Phaser.Scene {
             const result = await response.json();
         
             if (!response.ok) {
-                throw new Error(result.message); 
+                throw new Error(result.message || "Gagal Login"); 
             }
         
+            // --- LOGIN SUKSES ---
             this.loginState = 'LOGGED_IN';
+            
             this.registry.set('currentMuridId', result.murid.id_murid);
             this.registry.set('currentMuridNama', result.murid.nama);
             
-            this.welcomeText.setText(`Halo, ${result.murid.nama}!`);
-            this.infoText.setText('Login sukses. Silakan mulai.');
-            this.infoText.setColor('#00ff00');
+            // TAMPILKAN NAMA PEMAIN (Dari hasil response API yang baru disimpan)
+            this.profileNameText.setText(result.murid.nama);
+            this.profileNameText.setFontSize('32px'); 
+            this.profileNameText.setColor('#00ff00'); // Hijau
+            
+            // Ganti warna avatar ke hijau
+            this.profileAvatar.setFillStyle(0x4caf50);
 
+            // NYALAKAN TOMBOL PLAY
             if (this.playButton) {
-                this.playButton.setTint(0xffffff);
-                this.playButton.setInteractive();
+                this.playButton.clearTint(); 
+                this.playButton.setInteractive(); 
                 
                 this.tweens.add({
                     targets: this.playButton,
-                    scale: { from: 0.8, to: 1.0 },
+                    scale: { from: 0.75, to: 0.9 },
                     duration: 200,
                     yoyo: true,
-                    onComplete: () => this.playButton.setScale(0.8)
+                    onComplete: () => this.playButton.setScale(0.75)
                 });
             }
         
         } catch (error) {
+            // --- LOGIN GAGAL ---
             this.loginState = 'FAILED';
-            this.infoText.setText(error.message); 
-            this.infoText.setColor('#ff0000');
-            console.log(error.message)
+            this.profileNameText.setText("Wajah Tak Dikenal"); 
+            this.profileNameText.setFontSize('24px');
+            this.profileNameText.setColor('#ff0000'); 
+            console.error("Login Error:", error);
+
+            this.time.delayedCall(2000, () => {
+                this.loginState = 'SEARCHING';
+                this.profileNameText.setColor('#ffffff');
+                this.profileNameText.setFontSize('48px');
+                this.profileNameText.setText("...");
+            });
 
             if (this.playButton) {
                 this.playButton.setTint(0x555555);
@@ -257,23 +302,19 @@ export class MainMenu extends Phaser.Scene {
     }
 
     handleLogout() {
-        if (!this.welcomeText || !this.welcomeText.active) {
-            return; 
-        }
         console.log("LOGOUT: Wajah hilang, reset ke 'SEARCHING'.");
         this.loginState = 'SEARCHING';
         this.currentMuridId = null;
         
-        // Reset UI
-        this.welcomeText.setText('Selamat Datang!');
-        this.infoText.setText('Mencari wajah...');
-        this.infoText.setColor('#ffff00');
+        this.profileNameText.setText('...');
+        this.profileNameText.setFontSize('48px');
+        this.profileNameText.setColor('#ffffff');
+        this.profileAvatar.setFillStyle(0x00bcd4);
 
         if (this.playButton) {
             this.playButton.setTint(0x555555);
-            this.playButton.disableInteractive(); 
+            this.playButton.disableInteractive();
         }
-        
     }
 
     calculateFaceYaw(landmarks) {
