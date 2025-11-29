@@ -7,6 +7,8 @@ export class MainMenu extends Phaser.Scene {
 
         this.faceMeshManager = null;
         this.settingsContainer = null;
+
+        this.bgMusic = null;
         this.isMusicOn = true;
         this.isSfxOn = true;
 
@@ -50,7 +52,7 @@ export class MainMenu extends Phaser.Scene {
     }
 
     setupAudioState() {
-        // Hanya mengatur default value di registry agar settings panel tidak error
+        // ... (Logika registry default tetap sama) ...
         if (this.registry.get('isMusicOn') === undefined) {
             this.registry.set('isMusicOn', true);
             this.registry.set('isSfxOn', true);
@@ -59,11 +61,30 @@ export class MainMenu extends Phaser.Scene {
             this.registry.set('highestLevelUnlocked', 1);
         }
 
-        // Ambil state terakhir
         this.isMusicOn = this.registry.get('isMusicOn');
         this.isSfxOn = this.registry.get('isSfxOn');
 
-        // NOTE: Bagian load & play music dihapus sesuai request
+        // --- PERUBAHAN PENTING DI SINI ---
+        
+        // 1. Cek apakah lagu 'bgMainMenu' sudah ada di Global Sound Manager?
+        // Ini mencegah lagu bertumpuk (double) saat kembali dari LevelMenu
+        let existingMusic = this.sound.get('bgMainMenu');
+
+        if (existingMusic) {
+            // Jika sudah ada (sedang main dari sebelumnya), gunakan referensi itu
+            this.bgMusic = existingMusic;
+        } else {
+            // Jika belum ada (baru buka game), buat baru
+            this.bgMusic = this.sound.add('bgMainMenu', { 
+                loop: true, 
+                volume: 0.5
+            });
+        }
+
+        // 2. Play hanya jika belum main & setting ON
+        if (this.isMusicOn && !this.bgMusic.isPlaying) {
+            this.bgMusic.play();
+        }
     }
 
     createVisuals() {
@@ -338,11 +359,21 @@ export class MainMenu extends Phaser.Scene {
         musicOnBtn.on('pointerdown', () => { 
             this.isMusicOn = true; 
             this.registry.set('isMusicOn', true); 
+
+            if (this.bgMusic && !this.bgMusic.isPlaying) {
+                this.bgMusic.play();
+            }
+
             updateButtons(); 
         });
         musicOffBtn.on('pointerdown', () => { 
             this.isMusicOn = false; 
-            this.registry.set('isMusicOn', false); 
+            this.registry.set('isMusicOn', false);
+            
+            if (this.bgMusic && this.bgMusic.isPlaying) {
+                this.bgMusic.stop();
+            }
+            
             updateButtons(); 
         });
 
@@ -351,6 +382,11 @@ export class MainMenu extends Phaser.Scene {
     }
 
     shutdown() {
+        // if (this.bgMusic) {
+        //     this.bgMusic.stop();
+        //     this.bgMusic = null;
+        // }
+
         if(this.faceMeshManager) this.faceMeshManager.stop();
         if (this.searchingEvent) this.searchingEvent.remove();
     }
