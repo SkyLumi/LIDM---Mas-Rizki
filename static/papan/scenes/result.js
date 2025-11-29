@@ -21,6 +21,19 @@ export class Result extends Phaser.Scene {
         const { width, height } = this.sys.game.config;
         const screenCenterX = width / 2;
         const screenCenterY = height / 2;
+        const isMusicOn = this.registry.get('isMusicOn');
+        this.bgMusic = this.sound.add('bgWin', { 
+            loop: true, 
+            volume: 0.5 
+        });
+
+        if (isMusicOn) {
+            this.time.delayedCall(300, () => {
+                if (this.bgMusic && !this.bgMusic.isPlaying) {
+                    this.bgMusic.play();
+                }
+            });
+        }
 
         // 1. Overlay
         this.add.rectangle(screenCenterX, screenCenterY, width, height, 0x000000, 0.7)
@@ -71,7 +84,6 @@ export class Result extends Phaser.Scene {
 
             if (btnType === 'home') {
                 btnKey = 'home-btn';
-                // GUNAKAN stopGameAndGo BIAR GAK FREEZE
                 onClick = () => this.stopGameAndGo('MainMenu');
             } else if (btnType === 'retry') {
                 btnKey = 'retry-btn';
@@ -107,8 +119,11 @@ export class Result extends Phaser.Scene {
 
     // --- FUNGSI NAVIGASI BERSIH (Supaya Gak Double Asset) ---
     stopGameAndGo(targetScene) {
-        console.log(`Navigasi: Stop ${this.previousLevelKey} -> Start ${targetScene}`);
         
+        if (this.bgMusic) {
+            this.bgMusic.stop();
+        }
+
         // 1. Matikan Scene Result ini
         this.scene.stop('Result');
         

@@ -6,10 +6,16 @@ export class Preloader extends Phaser.Scene {
     /** @returns {void} */
     editorPreload() {
         const basePathFont = 'static/assets/font'
+        const basePathAudio = 'static/assets/audio'
 
         this.load.font('LilitaOne', `${basePathFont}/LilitaOne-Regular.ttf`)
         this.load.font('Raleway', `${basePathFont}/Raleway-Regular.ttf`)
         this.load.font('RalewayBold', `${basePathFont}/Raleway-Bold.ttf`)
+
+        this.load.audio('bgMainMenu', `${basePathAudio}/papan-mainmenu.m4a`)
+        this.load.audio('bgGameplay', `${basePathAudio}/papan-gameplay.m4a`)
+        this.load.audio('bgWin', `${basePathAudio}/papan-win.m4a`)
+        this.load.audio('sfxWin', `${basePathAudio}/papan-winsfx.m4a`)
     
         // Countdown
         this.load.image("1", "static/assets/papan_img/1.png");
