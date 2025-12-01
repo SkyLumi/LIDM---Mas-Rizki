@@ -34,7 +34,7 @@ export class BaseGameScene extends Phaser.Scene {
         // 3. GAME STATE
         this.score = 0; 
         this.itemsCollected = 0; 
-        this.itemsDropped = 0; // Tambahan untuk hitung akurasi
+        this.itemsDropped = 0; 
         this.targetItems = 3;    
         this.currentLives = 3;   
         this.spawnDelay = 3000; 
@@ -54,15 +54,19 @@ export class BaseGameScene extends Phaser.Scene {
         this.nextItemIndex = 1; 
         this.maxItemIdx = 5; 
 
-        // --- [NEW: ANALYTICS DATA STRUCTURE] ---
+        // --- OPTIMASI: Throttling Variable ---
+        this.lastAiUpdate = 0;
+        this.aiUpdateInterval = 50; // 50ms = 20 FPS (Biar gak berat)
+
+        // --- ANALYTICS DATA STRUCTURE ---
         this.analytics = {
-            gameStartTime: 0,       // Diisi saat startCountdown selesai
-            totalFrames: 0,         // Total frame game berjalan
-            handLossFrames: 0,      // Frame dimana tangan tidak terdeteksi
-            heatmapData: [],        // Koordinat tangan [x, y]
-            reactionTimes: [],      // Waktu dari spawn -> masuk keranjang
-            balanceTimes: [],       // Waktu bertahan di atas papan (PlankTouch -> Bucket)
-            missedBalls: 0          // Bola jatuh
+            gameStartTime: 0,       
+            totalFrames: 0,         
+            handLossFrames: 0,      
+            heatmapData: [],        
+            reactionTimes: [],      
+            balanceTimes: [],       
+            missedBalls: 0
         };
     }
 
@@ -90,7 +94,7 @@ export class BaseGameScene extends Phaser.Scene {
         this.spawnMaxX = width - 300;
         this.targetPlankPos = { x: width/2, y: height/2, angle: 0 };
 
-        // --- SETUP UI & OBJECTS (Sama seperti sebelumnya) ---
+        // --- SETUP UI & OBJECTS ---
         this.add.image(width / 2, 45, "topbar").setScale(0.95);
 
         const panelX = 64;
@@ -184,7 +188,7 @@ export class BaseGameScene extends Phaser.Scene {
 
         // --- ANALYTICS: CATAT WAKTU SPAWN ---
         ballObj.setData('spawnTime', this.time.now);
-        ballObj.setData('plankTouchTime', null); // Reset waktu sentuh papan
+        ballObj.setData('plankTouchTime', null); 
     }
 
     showTutorial() {
@@ -226,44 +230,61 @@ export class BaseGameScene extends Phaser.Scene {
         showImage();
     }
 
+    // --- OPTIMIZED MEDIA PIPE (THROTTLING) ---
     onMediaPipeResults(results) {
         if (!this.sys || !this.sys.game || !this.gameStarted || this.gameOver) return;
         
+        // --- OPTIMASI: THROTTLING 20 FPS ---
+        const now = Date.now();
+        if (now - this.lastAiUpdate < this.aiUpdateInterval) return;
+        this.lastAiUpdate = now;
+        // -----------------------------------
+
         // --- ANALYTICS: HAND TRACKING ---
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            // Tangan terdeteksi
-            // Simpan data heatmap (Sampling tiap 10 frame biar memori gak jebol)
+            // Simpan heatmap sampling
             if (this.analytics.totalFrames % 10 === 0) {
-                const hand = results.multiHandLandmarks[0][0]; // Ambil koordinat wrist tangan pertama
+                const hand = results.multiHandLandmarks[0][0]; 
                 this.analytics.heatmapData.push({ x: hand.x, y: hand.y });
             }
         } else {
-            // Tangan hilang
             this.analytics.handLossFrames++;
         }
+        
+        // Hitung Total Frame (Disesuaikan dengan throttling)
+        this.analytics.totalFrames++; 
 
         // Logic Gerak Papan
         const { width, height } = this.sys.game.config;
         const maxAngle = 0.8;
         const angleSensitivity = 0.005;
+
         if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
             const wrist1 = results.multiHandLandmarks[0][0];
             const wrist2 = results.multiHandLandmarks[1][0];
-            this.targetPlankPos.x = ((wrist1.x + wrist2.x) / 2) * width;
-            this.targetPlankPos.y = ((wrist1.y + wrist2.y) / 2) * height;
+            
+            // Posisi tengah antara dua tangan (ini yang menggerakkan papan)
+            const centerX = ((wrist1.x + wrist2.x) / 2) * width;
+            const centerY = ((wrist1.y + wrist2.y) / 2) * height;
+
+            this.targetPlankPos.x = centerX;
+            this.targetPlankPos.y = centerY;
+
             let leftHandY = (wrist1.x > wrist2.x) ? wrist1.y : wrist2.y;
             let rightHandY = (wrist1.x < wrist2.x) ? wrist1.y : wrist2.y;
             let yDiff = (leftHandY - rightHandY) * height;
             this.targetPlankPos.angle = Phaser.Math.Clamp(yDiff * angleSensitivity, -maxAngle, maxAngle);
+
+        } else {
+            // Kalau tangan hilang, papan jatuh ke bawah (biar user sadar)
+            this.targetPlankPos.x = width / 2;
+            this.targetPlankPos.y = height + 300;
         } 
     }
 
     update(time, delta) {
         if (this.gameOver || !this.gameStarted) return;
         
-        // --- ANALYTICS: HITUNG FRAME ---
-        this.analytics.totalFrames++;
-
         this.updatePlankPosition(); 
         this.updateDispenser(time); 
         this.updateBallPhysics();   
@@ -356,8 +377,6 @@ export class BaseGameScene extends Phaser.Scene {
         const distance = Math.sqrt((rotatedX - closestX) ** 2 + (rotatedY - closestY) ** 2);
         
         if (distance < ballData.radius) {
-            // --- ANALYTICS: SENTUH PAPAN ---
-            // Jika baru pertama kali sentuh papan, catat waktunya untuk Balance Metric
             if (this.ball.getData('plankTouchTime') === null) {
                 this.ball.setData('plankTouchTime', this.time.now);
             }
@@ -512,9 +531,7 @@ export class BaseGameScene extends Phaser.Scene {
         if (this.analytics.balanceTimes.length > 0) {
             const sumBalance = this.analytics.balanceTimes.reduce((a, b) => a + b, 0);
             
-            // Ganti nama variabel perhitungan mentah agar tidak bentrok
-            // Ini adalah rata-rata dalam milidetik (misal: 5396 ms)
-            const rawAverageMs = sumBalance / this.analytics.balanceTimes.length;
+            const avgBalanceTime = sumBalance / this.analytics.balanceTimes.length;
 
             const TARGET_TIME_MS = 7000; 
             
@@ -534,8 +551,8 @@ export class BaseGameScene extends Phaser.Scene {
             metrics: {
                 fokus: skorFokus.toFixed(1),
                 koordinasi: skorKoordinasi.toFixed(1),
-                waktuReaksi: null,
-                keseimbangan: skorKeseimbangan.toFixed(0)
+                waktuReaksi: avgReactionTime > 0 ? avgReactionTime.toFixed(0) : null,
+                keseimbangan: skorKeseimbangan.toFixed(0) // Skor 0-100
             },
             rawHeatmap: this.analytics.heatmapData
         };
@@ -547,7 +564,7 @@ export class BaseGameScene extends Phaser.Scene {
         this.gameStarted = false;
         
         const report = this.calculateAnalytics();
-        
+
         this.scene.launch('Result', { 
             score: this.score, 
             stars: 0, 
