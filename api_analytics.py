@@ -450,7 +450,7 @@ def get_laporan_detail(id_laporan):
         print(f"Error get laporan detail: {e}")
         return jsonify({"status": "gagal", "message": "Terjadi kesalahan server"}), 500
     
-@analytics_bp.route('/analytics/history/<int:id_profil>', methods=['GET'])
+@analytics_bp.route('/analytics/game-history/<int:id_profil>', methods=['GET'])
 @guru_required
 def get_game_history(id_profil):
     """
