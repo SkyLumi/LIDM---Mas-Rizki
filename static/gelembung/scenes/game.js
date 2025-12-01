@@ -702,7 +702,7 @@ export default class Game extends Phaser.Scene {
          const sumSpeed = this.analytics.handSpeeds.reduce((a, b) => a + b, 0);
          const avgSpeed = sumSpeed / this.analytics.handSpeeds.length;
 
-         const TARGET_SPEED = 0.4; 
+         const TARGET_SPEED = 0.3; 
          skorKetangkasan = Math.min(100, (avgSpeed / TARGET_SPEED) * 100);
       }
 
