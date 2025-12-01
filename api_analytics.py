@@ -453,100 +453,93 @@ def get_laporan_detail(id_laporan):
 @analytics_bp.route('/analytics/history/<int:id_profil>', methods=['GET'])
 @guru_required
 def get_game_history(id_profil):
+    """
+    API History Game & Heatmap dengan Filter Bulan
+    """
     try:
-        # ... (Code Query Total Game & Durasi SAMA PERSIS, GAK BERUBAH) ...
-        # Copas aja bagian 'stmt_total' dan 'games_stats' dari kode sebelumnya
-        # Biar hemat tempat saya langsung ke bagian HEATMAP-nya ya:
+        # 1. TANGKAP FILTER
+        req_month = request.args.get('month', type=int)
+        req_year = request.args.get('year', type=int)
 
-        # --- 1. COPY BAGIAN INI KE ATAS (Code lama) ---
-        stmt_total = (
-            db.select(
-                GamesDashboard.nama_game,
-                func.count(GameAktual.id_sesi).label('total_main'),
-                func.sum(GameAktual.waktu_durasi_detik).label('total_durasi')
-            )
-            .join(GameAktual, GamesDashboard.id_games_dashboard == GameAktual.id_games_dashboard)
-            .where(GameAktual.id_profil == id_profil)
-            .group_by(GamesDashboard.nama_game)
+        target_date = datetime.date.today()
+        if req_month and req_year:
+            try:
+                target_date = datetime.date(req_year, req_month, 1)
+            except ValueError:
+                pass # Fallback ke today
+
+        # Range Bulan
+        month_start = target_date.replace(day=1)
+        if month_start.month == 12:
+            next_month = month_start.replace(year=month_start.year+1, month=1, day=1)
+        else:
+            next_month = month_start.replace(month=month_start.month+1, day=1)
+        month_end = next_month - datetime.timedelta(days=1)
+
+        # 2. QUERY DATA GAME
+        # Join ke GamesDashboard biar dapet nama gamenya
+        query = db.select(
+            GameAktual, GamesDashboard.nama_game
+        ).join(
+            GamesDashboard, GameAktual.id_games_dashboard == GamesDashboard.id_games_dashboard
+        ).where(
+            GameAktual.id_profil == id_profil,
+            func.date(GameAktual.waktu_main) >= month_start,
+            func.date(GameAktual.waktu_main) <= month_end
         )
-        results_total = db.session.execute(stmt_total).all()
+        
+        results = db.session.execute(query).all()
 
+        # 3. OLAH DATA (Stats & Heatmap)
         games_stats = {}
-        for row in results_total:
-            nama_game = row[0].upper()
-            games_stats[nama_game] = {
-                'count': row[1],
-                'duration_minutes': round(row[2] / 60) if row[2] else 0
-            }
         
-        today = datetime.date.today()
-        
-        # 1. Cari "Senin" minggu ini
-        # (weekday(): Senin=0, ..., Jumat=4, Minggu=6)
-        monday_of_current_week = today - datetime.timedelta(days=today.weekday())
-        
-        # 2. Mundur 4 minggu ke belakang dari Senin itu (Total 5 minggu)
-        start_date = monday_of_current_week - datetime.timedelta(weeks=4)
+        # Struktur Heatmap 4 Minggu x 7 Hari (Default 0)
+        # Minggu 1-4
+        heatmap_games = [[0]*7 for _ in range(4)] 
+        heatmap_time = [[0]*7 for _ in range(4)]
 
-        # 3. Ambil Data DB (Sama kayak kemarin)
-        stmt_daily = (
-            db.select(
-                func.date(GameAktual.waktu_main).label('tanggal'),
-                func.count(GameAktual.id_sesi).label('daily_count'),
-                func.sum(GameAktual.waktu_durasi_detik).label('daily_duration')
-            )
-            .where(GameAktual.id_profil == id_profil)
-            .where(func.date(GameAktual.waktu_main) >= start_date)
-            .group_by(func.date(GameAktual.waktu_main))
-        )
-        results_daily = db.session.execute(stmt_daily).all()
-
-        daily_map = {}
-        for row in results_daily:
-            tgl_str = row[0].isoformat()
-            daily_map[tgl_str] = {
-                'count': row[1],
-                'duration_minutes': round(row[2] / 60) if row[2] else 0
-            }
-
-        # 4. ISI GRID (PASTI DIMULAI DARI SENIN)
-        heatmap_games = []
-        heatmap_time = []
-        weeks_label = []
-
-        current_day_pointer = start_date # Ini PASTI Senin
-        
-        for week_idx in range(5):
-            week_row_games = []
-            week_row_time = []
+        for row in results:
+            session = row.GameAktual
+            game_name = row.nama_game # "GELEMBUNG AJAIB", dll
             
-            # Label Minggu
-            iso_week = current_day_pointer.isocalendar()[1]
-            weeks_label.append(f"Minggu {iso_week}")
-
-            for day_idx in range(7): # 0=Senin ... 6=Minggu
-                tgl_str = current_day_pointer.isoformat()
-                data_hari = daily_map.get(tgl_str, {'count': 0, 'duration_minutes': 0})
-                
-                week_row_games.append(data_hari['count'])
-                week_row_time.append(data_hari['duration_minutes'])
-                
-                current_day_pointer += datetime.timedelta(days=1)
+            # A. Stats Per Game (Bar Chart)
+            if game_name not in games_stats:
+                games_stats[game_name] = {"count": 0, "duration_minutes": 0}
             
-            heatmap_games.append(week_row_games)
-            heatmap_time.append(week_row_time)
+            games_stats[game_name]["count"] += 1
+            # Asumsi durasi di DB dalam detik -> convert ke menit
+            duration_min = round((session.waktu_durasi_detik or 0) / 60, 1)
+            games_stats[game_name]["duration_minutes"] += duration_min
+
+            # B. Heatmap Logic (Mapping Tanggal ke Minggu 1-4)
+            # Tanggal 1-7: Minggu 1 (Index 0)
+            # Tanggal 8-14: Minggu 2 (Index 1)
+            # Tanggal 15-21: Minggu 3 (Index 2)
+            # Tanggal 22-End: Minggu 4 (Index 3)
+            
+            day_of_month = session.waktu_main.day
+            weekday_idx = session.waktu_main.weekday() # 0=Senin, 6=Minggu
+            
+            week_idx = 0
+            if 1 <= day_of_month <= 7: week_idx = 0
+            elif 8 <= day_of_month <= 14: week_idx = 1
+            elif 15 <= day_of_month <= 21: week_idx = 2
+            else: week_idx = 3 # Sisanya masuk minggu 4 semua
+            
+            heatmap_games[week_idx][weekday_idx] += 1
+            heatmap_time[week_idx][weekday_idx] += int(duration_min)
 
         return jsonify({
             "status": "sukses",
             "games_stats": games_stats,
             "heatmap": {
+                "weeks": ["Minggu 1", "Minggu 2", "Minggu 3", "Minggu 4"],
                 "games": heatmap_games,
-                "time": heatmap_time,
-                "weeks": weeks_label
+                "time": heatmap_time
             }
-        }), 200
+        })
 
     except Exception as e:
-        print(f"Error get history: {e}")
-        return jsonify({"status": "gagal", "message": "Server error"}), 500
+        print(f"Error game history: {e}")
+        return jsonify({"status": "gagal", "message": "Server Error"}), 500
     
