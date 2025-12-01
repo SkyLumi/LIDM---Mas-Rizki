@@ -22,9 +22,9 @@ export class Preloader extends Phaser.Scene {
         // ----             Level Menu               ----
         this.load.image('levelBG', 'static/assets/eskrim_img/backgroundLevelMenu.png')
         this.load.image('levelbox', 'static/assets/eskrim_img/levelbox.png')
-        this.load.image('level1Btn', 'static/assets/eskrim_img/level1Btn.png')
-        this.load.image('level2Btn', 'static/assets/eskrim_img/level2Btn.png')
-        this.load.image('level3Btn', 'static/assets/eskrim_img/level3Btn.png')
+        this.load.image('level1Btn', 'static/assets/eskrim_img/level1btn.png')
+        this.load.image('level2Btn', 'static/assets/eskrim_img/level2btn.png')
+        this.load.image('level3Btn', 'static/assets/eskrim_img/level3btn.png')
         this.load.image('levelLockedBtn', 'static/assets/eskrim_img/level-locked-btn.png')
         this.load.image('closeButton', 'static/assets/eskrim_img/close-btn.png')
         
