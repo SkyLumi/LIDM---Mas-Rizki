@@ -163,25 +163,28 @@ def calculate_period_stats(id_profil, start_date, end_date):
     val_keseimbangan = float(scores.keseimbangan) if scores.keseimbangan else 0
     val_ketangkasan = float(scores.ketangkasan) if scores.ketangkasan else 0
     val_memori = float(scores.memori) if scores.memori else 0
-    val_waktu_reaksi = float(scores.waktu_reaksi) if scores.waktu_reaksi else 0 # Satuan ms
+    val_waktu_reaksi = float(scores.waktu_reaksi) if scores.waktu_reaksi else 0 
 
     # ==========================================
     # 2. HITUNG PERIOD AVERAGE (SKALA 0-100)
     # ==========================================
-    # Kita harus menormalisasi Waktu Reaksi (ms) menjadi Skor (0-100)
-    # Rumus: 0ms = 100 poin, 10.000ms = 0 poin
+    # Normalisasi Waktu Reaksi (ms -> Score 0-100)
     score_reaksi_norm = 0
     if val_waktu_reaksi > 0:
         score_reaksi_norm = max(0, min(100, ((10000 - val_waktu_reaksi) / 10000) * 100))
 
     # Hitung Rata-rata dari 6 Skill
-    # Jika belum ada data sama sekali (semua 0), hasil avg 0
-    total_skill = val_fokus + val_koordinasi + val_keseimbangan + val_ketangkasan + val_memori + score_reaksi_norm
-    period_avg = round(total_skill / 6, 1)
+    # Cek apakah ada data (jika semua 0, average 0)
+    # (Bisa dicek dari salah satu field, misal val_fokus, atau total)
+    if (val_fokus + val_koordinasi + val_keseimbangan + val_ketangkasan + val_memori + score_reaksi_norm) == 0:
+        period_avg = 0.0
+    else:
+        total_skill = val_fokus + val_koordinasi + val_keseimbangan + val_ketangkasan + val_memori + score_reaksi_norm
+        period_avg = round(total_skill / 6, 1)
 
 
     # ==========================================
-    # 3. QUERY GAME BREAKDOWN (UNTUK CHART HORIZONTAL)
+    # 3. QUERY GAME BREAKDOWN & SKILL DETAILS
     # ==========================================
     game_skill_query = db.select(
         GamesDashboard.nama_game,
@@ -205,9 +208,9 @@ def calculate_period_stats(id_profil, start_date, end_date):
     game_skills_detailed = {}
 
     for row in game_results:
-        nama = row.nama_game # Pastikan nama di DB sesuai (Case Sensitive)
+        nama_asli = row.nama_game 
+        nama_check = nama_asli.lower() 
         
-        # Ambil nilai raw (handle None)
         fokus = float(row.fokus) if row.fokus else 0
         koor = float(row.koordinasi) if row.koordinasi else 0
         keseimbangan = float(row.keseimbangan) if row.keseimbangan else 0
@@ -215,47 +218,32 @@ def calculate_period_stats(id_profil, start_date, end_date):
         memori = float(row.memori) if row.memori else 0
         waktu_reaksi_ms = float(row.waktu_reaksi) if row.waktu_reaksi else 0
 
-        # Normalisasi Waktu Reaksi (ms -> 0-100)
         reaksi_score = 0
         if waktu_reaksi_ms > 0:
             reaksi_score = max(0, min(100, ((10000 - waktu_reaksi_ms) / 10000) * 100))
 
+        # Hitung Skor Gabungan per Game (Sesuai Resep)
         final_score = 0
-
-        # === RESEP PENILAIAN PER GAME (SESUAI GAMBAR) ===
-        # Gunakan .lower() biar aman kalau di DB tulisannya "Gelembung Ajaib" atau "gelembung ajaib"
-        name_lower = nama.lower()
-
-        if "gelembung" in name_lower or "tangkap" in name_lower:
-            # Resep: Fokus, Koor Tangan Mata, Waktu Reaksi, Ketangkasan
-            # Pembagi: 4
+        if "gelembung" in nama_check or "tangkap" in nama_check:
             final_score = (fokus + koor + reaksi_score + ketangkasan) / 4
-        
-        elif "papan" in name_lower: # Papan seimbang
-            # Resep: Fokus, Koor Tangan Mata, Keseimbangan
-            # Pembagi: 3
+        elif "papan" in nama_check:
             final_score = (fokus + koor + keseimbangan) / 3
-            
-        elif "kartu" in name_lower or "cocok" in name_lower:
-            # Resep: Memori
-            # Pembagi: 1
+        elif "kartu" in nama_check or "cocok" in nama_check:
             final_score = memori
-        
         else:
-            # Default kalau ada game baru (rata-rata semua)
             final_score = (fokus + koor + reaksi_score + keseimbangan + ketangkasan + memori) / 6
 
-        # Simpan ke dictionary (Round 1 desimal)
-        game_breakdown[nama] = round(final_score, 1)
+        game_breakdown[nama_asli] = round(final_score, 1)
 
-        game_skills_detailed[nama] = {
+        # Simpan Detail Skill Per Game
+        game_skills_detailed[nama_asli] = {
             "fokus": round(fokus, 1),
             "koordinasi": round(koor, 1),
             "keseimbangan": round(keseimbangan, 1),
             "ketangkasan": round(ketangkasan, 1),
             "memori": round(memori, 1),
-            "waktu_reaksi": round(reaksi_score, 1), # Udah dikonversi 0-100
-            "waktu_reaksi_ms": round(waktu_reaksi_ms, 1) # Raw data
+            "waktu_reaksi": round(reaksi_score, 1), 
+            "waktu_reaksi_ms": round(waktu_reaksi_ms, 1)
         }
 
 
@@ -324,7 +312,7 @@ def calculate_period_stats(id_profil, start_date, end_date):
             "koordinasi": round(val_koordinasi, 1),
             "keseimbangan": round(val_keseimbangan, 1),
             "memori": round(val_memori, 1),
-            "waktu_reaksi": round(val_waktu_reaksi, 1), # Kembalikan nilai asli (ms)
+            "waktu_reaksi": round(val_waktu_reaksi, 1), 
         },
         "heatmap": final_grid,
         "hand_usage": {"left": avg_left, "right": avg_right},
@@ -332,9 +320,9 @@ def calculate_period_stats(id_profil, start_date, end_date):
             "total_games": total_games,
             "total_minutes": total_minutes
         },
-        "game_scores": game_breakdown, # Dictionary skor per game
+        "game_scores": game_breakdown, 
         "game_skills": game_skills_detailed,
-        "period_average": period_avg   # Skor Keseluruhan (0-100)
+        "period_average": period_avg  
     }
 
 @analytics_bp.route('/analytics/profil/<int:id_profil>/report/full', methods=['GET'])
@@ -344,7 +332,7 @@ def get_full_report(id_profil):
     API Report dengan Filter Bulan & Tahun
     """
     try:
-        # Validasi Profil & Akses Guru (Tetap sama)
+        # Validasi Profil & Akses Guru
         profil_murid = db.session.get(Profil, id_profil)
         if not profil_murid: return jsonify({"status": "gagal", "message": "Murid tidak ditemukan"}), 404
         
@@ -353,25 +341,19 @@ def get_full_report(id_profil):
         if not profil_guru or profil_murid.id_sekolah != profil_guru.id_sekolah:
             return jsonify({"status": "gagal", "message": "Akses ditolak"}), 403
 
-        # === LOGIC BARU: TANGKAP FILTER DARI FRONTEND ===
+        # === LOGIC TANGGAL ===
         req_month = request.args.get('month', type=int)
         req_year = request.args.get('year', type=int)
 
-        # Default ke Hari Ini
         target_date = datetime.date.today()
-
-        # Kalau Frontend kirim filter, pakai tanggal dari filter
         if req_month and req_year:
             try:
                 target_date = datetime.date(req_year, req_month, 1)
             except ValueError:
-                # Fallback kalau tanggal ga valid
                 target_date = datetime.date.today()
 
-        # Tentukan Start & End Date berdasarkan target_date
+        # Mulai & Akhir Bulan
         month_start = target_date.replace(day=1)
-        
-        # Hitung Akhir Bulan
         if month_start.month == 12:
             next_month = month_start.replace(year=month_start.year+1, month=1, day=1)
         else:
@@ -380,24 +362,28 @@ def get_full_report(id_profil):
 
         report_data = {}
 
-        # 1. OVERALL (1 Bulan Penuh sesuai filter)
+        # 1. OVERALL (1 Bulan Penuh)
         report_data['overall'] = calculate_period_stats(id_profil, month_start, month_end)
 
-        # 2. BREAKDOWN (Minggu 1 - 4 relatif terhadap bulan yang dipilih)
+        # 2. BREAKDOWN (Minggu 1 - 4)
+        # FIX: Pastikan Minggu ke-4 mencakup sisa hari sampai akhir bulan (biar tgl 29-31 masuk)
         for i in range(4):
             week_start = month_start + datetime.timedelta(days=i*7)
             week_end = week_start + datetime.timedelta(days=6)
             
-            # Potong kalau lewat bulan
-            if week_start > month_end: 
-                # Kalau minggu ke-4 lewat bulan, kirim data kosong
-                report_data[f"week{i+1}"] = calculate_period_stats(id_profil, week_start, week_start) # Range 0 hari (kosong)
-                continue 
+            # Kalau ini minggu ke-4 (index 3), paksa sampai akhir bulan
+            if i == 3:
+                week_end = month_end
 
+            # Safety cap
             if week_end > month_end: week_end = month_end
-
-            key = f"week{i+1}"
-            report_data[key] = calculate_period_stats(id_profil, week_start, week_end)
+            
+            # Kalau start sudah lewat bulan, data kosong
+            if week_start > month_end:
+                report_data[f"week{i+1}"] = calculate_period_stats(id_profil, month_end, month_end) # Dummy empty
+            else:
+                key = f"week{i+1}"
+                report_data[key] = calculate_period_stats(id_profil, week_start, week_end)
 
         return jsonify({
             "status": "sukses",
