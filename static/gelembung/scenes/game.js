@@ -696,17 +696,13 @@ export default class Game extends Phaser.Scene {
          skorKoordinasi = isWin ? 100 : 0;
       }
 
-      // 4. KETANGKASAN (AGILITY) -- BARU
-      // Menghitung rata-rata kecepatan tangan antar bubble
+
       let skorKetangkasan = 0;
       if (this.analytics.handSpeeds.length > 0) {
          const sumSpeed = this.analytics.handSpeeds.reduce((a, b) => a + b, 0);
-         const avgSpeed = sumSpeed / this.analytics.handSpeeds.length; // pixel per ms
+         const avgSpeed = sumSpeed / this.analytics.handSpeeds.length;
 
-         // TARGET KECEPATAN:
-         // Anggaplah kecepatan "Jago" adalah 1.5 pixel/ms (berpindah 1500px dalam 1 detik)
-         // Jika avgSpeed >= 1.5, maka skor 100
-         const TARGET_SPEED = 1.5; 
+         const TARGET_SPEED = 0.4; 
          skorKetangkasan = Math.min(100, (avgSpeed / TARGET_SPEED) * 100);
       }
 

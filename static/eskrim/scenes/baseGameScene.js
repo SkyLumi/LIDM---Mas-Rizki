@@ -20,6 +20,10 @@ export class BaseGameScene extends Phaser.Scene {
         this.barFullHeight = 0;
         this.scoop = 0
         this.gameReady = false;
+
+        // --- OPTIMASI: Variabel Throttling AI ---
+        this.lastAiUpdate = 0;
+        this.aiUpdateInterval = 50; // Update AI setiap 50ms (Ringan)
     }
 
     create() {
@@ -35,17 +39,21 @@ export class BaseGameScene extends Phaser.Scene {
             this.gameBGM.play();
         }
 
-        //                      Analytics                          //
+        // ---------------- ANALYTICS INIT ---------------- //
         this.analytics = {
-            gameStartTime: this.time.now, // Catet waktu mulai
-            totalFrames: 0,   // Total frame game
-            handLossFrames: 0, // Total frame waktu tangan hilang
-            heatmapData: [],   // nampung data heatmap (x, y, t)
-            tcr_success: 0,    // (Koordinasi) Es krim ketangkep
-            tcr_total: 0,      // (Koordinasi) Total es krim muncul
-            reactionTimes: []  // (Waktu Reaksi) Buat game Gelembung
+            gameStartTime: this.time.now,
+            totalFrames: 0,
+            handLossFrames: 0,
+            heatmapData: [],
+            tcr_success: 0,    
+            tcr_total: 0,      
+            reactionTimes: [],
+            
+            // --- DATA KETANGKASAN BARU ---
+            handSpeeds: [], // Simpan kecepatan gerakan cone
+            lastCatchData: null // Posisi & waktu tangkapan terakhir
         };
-        //                      ----------                          //
+        // ------------------------------------------------ //
 
         let screenCenterX = width / 2;
         let screenCenterY = height / 2;
@@ -99,7 +107,7 @@ export class BaseGameScene extends Phaser.Scene {
                 key: 'tilt_left_anim',
                 frames: this.anims.generateFrameNumbers('arm_tilt_left'),
                 frameRate: 10,
-                repeat: 0 // (PENTING: 0 = Main sekali)
+                repeat: 0 
             });
         }
 
@@ -108,7 +116,7 @@ export class BaseGameScene extends Phaser.Scene {
                 key: 'tilt_right_anim',
                 frames: this.anims.generateFrameNumbers('arm_tilt_right'),
                 frameRate: 10,
-                repeat: 0 // (PENTING: 0 = Main sekali)
+                repeat: 0 
             });
         }
 
@@ -266,12 +274,32 @@ export class BaseGameScene extends Phaser.Scene {
     handleCatch(cone, cream) {
         const catchX = cream.x;
         const catchY = cream.y;
+        const now = this.time.now;
 
+        // --- HITUNG WAKTU REAKSI ---
         if (cream.spawnTime) {
-            const reactionTime = this.time.now - cream.spawnTime;
+            const reactionTime = now - cream.spawnTime;
             this.analytics.reactionTimes.push(reactionTime);
-            console.log(`Waktu Reaksi: ${reactionTime}ms`);
         }
+
+        // --- LOGIK KETANGKASAN (AGILITY) ---
+        // Hitung seberapa cepat Cone bergerak dari tangkapan terakhir
+        if (this.analytics.lastCatchData) {
+             const lastData = this.analytics.lastCatchData;
+             
+             // Jarak Cone sekarang vs Cone di tangkapan sebelumnya
+             const distance = Phaser.Math.Distance.Between(lastData.x, lastData.y, this.cone.x, this.cone.y);
+             const timeDiff = now - lastData.time;
+
+             if (timeDiff > 0) {
+                 const speed = distance / timeDiff; // Pixel per ms
+                 this.analytics.handSpeeds.push(speed);
+             }
+        }
+        // Simpan data posisi Cone sekarang sebagai 'terakhir'
+        this.analytics.lastCatchData = { x: this.cone.x, y: this.cone.y, time: now };
+
+        // ------------------------------------------
 
         this.analytics.tcr_success++
         this.scoop += 1
@@ -295,7 +323,7 @@ export class BaseGameScene extends Phaser.Scene {
             duration: 800,
             ease: 'Power1',
             onComplete: () => {
-                scorePopup.destroy(); // Hapus teksnya setelah selesai
+                scorePopup.destroy(); 
             }
         });
 
@@ -307,35 +335,28 @@ export class BaseGameScene extends Phaser.Scene {
     showTutorialOverlay(tutorialImageKey) {
         const { width, height } = this.sys.game.config;
 
-        // 1. Bikin background item (biar nge-blur)
         const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
-            .setDepth(190); // (Di bawah countdown, tapi di atas game)
+            .setDepth(190); 
 
-        // 2. Bikin gambar tutorial
         const tutorialImg = this.add.image(width / 2, height / 2 - 100, tutorialImageKey)
             .setOrigin(0.5)
             .setDepth(190)
-            .setScale(0.8); // (Sesuaikan scale)
+            .setScale(0.8); 
 
-        // 3. Bikin Tombol "Mulai"
         const mulaiButton = this.add.image(width / 2, height / 2 + 300, 'mulai_button')
             .setOrigin(0.5)
             .setDepth(190)
-            .setInteractive() // <-- Bikin bisa diklik
-            .setScale(0.8); // (Sesuaikan scale)
+            .setInteractive() 
+            .setScale(0.8); 
 
-        // 4. Bikin "hover" effect (Opsional tapi keren)
         mulaiButton.on('pointerover', () => mulaiButton.setScale(0.85));
         mulaiButton.on('pointerout', () => mulaiButton.setScale(0.8));
 
-        // 5. Pas Tombol "Mulai" DIKLIK:
         mulaiButton.on('pointerdown', () => {
-            // (Hancurin semua overlay)
             bg.destroy();
             tutorialImg.destroy();
             mulaiButton.destroy();
             
-            // (Panggil Countdown)
             this.startCountdown(); 
         });
     }
@@ -345,15 +366,14 @@ export class BaseGameScene extends Phaser.Scene {
 
         const countdownImage = this.add.image(width / 2, height / 2, 'countdown_3')
             .setOrigin(0.5)
-            .setDepth(200) // Depth 200 (paling atas)
-            .setScale(0); // Mulai dari 0 (buat animasi)
+            .setDepth(200) 
+            .setScale(0); 
 
-        // Bikin animasi "pop-up"
         this.tweens.add({
             targets: countdownImage,
-            scale: 1, // Jadi 100%
+            scale: 1, 
             duration: 300,
-            ease: 'Back.easeOut' // Efek "pop"
+            ease: 'Back.easeOut' 
         });
 
         let count = 3;
@@ -372,23 +392,21 @@ export class BaseGameScene extends Phaser.Scene {
                 } else if (count === 0) {
                     countdownImage.setTexture('countdown_go');
                 } else {
-                    // Selesai (setelah "GO!")
                     countdownImage.destroy();
                     
-                    // --- 1. GAME SIAP ---
                     this.gameReady = true; 
                     
-                    // --- 2. JAM ANALYTICS DIMULAI ---
                     this.analytics.gameStartTime = this.time.now;
+                    // Initial agility data (posisi tengah layar)
+                    this.analytics.lastCatchData = { x: width/2, y: height/2, time: this.time.now };
                     
-                    // --- 3. TIMER GAME DIMULAI ---
                     this.gameTimer.paused = false;
                     this.spawnTimer.paused = false;
-                    if (this.spawnTimer2) { // (Buat Level 3)
+                    if (this.spawnTimer2) { 
                         this.spawnTimer2.paused = false;
                     }
                     
-                    countdownEvent.remove(); // Hapus event-nya
+                    countdownEvent.remove(); 
                 }
 
                 this.tweens.add({
@@ -416,22 +434,37 @@ export class BaseGameScene extends Phaser.Scene {
         // --- 1. Hitung Semua Skor Analisis ---
         const totalPlayTimeMs = this.time.now - this.analytics.gameStartTime;
         
-        // Rumus Skor Fokus (UI: 90.6 Points)
-        const skorFokus = ((this.analytics.totalFrames - this.analytics.handLossFrames) / this.analytics.totalFrames) * 100;
+        // Skor Fokus (Total frame - Loss Frame / Total)
+        let skorFokus = 0;
+        if (this.analytics.totalFrames > 0) {
+            skorFokus = ((this.analytics.totalFrames - this.analytics.handLossFrames) / this.analytics.totalFrames) * 100;
+        }
 
-        // Rumus Skor Koordinasi (UI: 55.4 Points)
+        // Skor Koordinasi (Success Catch / Total Spawn)
         const skorKoordinasi = (this.analytics.tcr_total > 0) ? (this.analytics.tcr_success / this.analytics.tcr_total) * 100 : 0;
 
+        // Skor Waktu Reaksi
         let avgReactionTime = 0;
         if (this.analytics.reactionTimes.length > 0) {
             const totalReaction = this.analytics.reactionTimes.reduce((a, b) => a + b, 0);
             avgReactionTime = totalReaction / this.analytics.reactionTimes.length;
         }
 
+        // Skor Ketangkasan (Baru)
+        let skorKetangkasan = 0;
+        if (this.analytics.handSpeeds.length > 0) {
+            const sumSpeed = this.analytics.handSpeeds.reduce((a, b) => a + b, 0);
+            const avgSpeed = sumSpeed / this.analytics.handSpeeds.length; // Pixel per ms
+            
+            // Target Speed (Misal: 1.2px/ms itu cepet)
+            const TARGET_SPEED = 0.5; 
+            skorKetangkasan = Math.min(100, (avgSpeed / TARGET_SPEED) * 100);
+        }
+
         // --- 2. Buat "Bungkusan" Data ---
         const analyticsReport = {
             id_profil: this.registry.get('currentMuridId'),
-            id_games_dashboard: 2,
+            id_games_dashboard: 2, // ID Game Es Krim
             level: this.scene.key,
             finalScore: this.score,
             win: isWin,
@@ -439,28 +472,37 @@ export class BaseGameScene extends Phaser.Scene {
             metrics: {
                 fokus: skorFokus.toFixed(1),
                 koordinasi: skorKoordinasi.toFixed(1),
-                waktuReaksi: avgReactionTime.toFixed(0)
+                waktuReaksi: avgReactionTime.toFixed(0),
+                ketangkasan: skorKetangkasan.toFixed(1) // Kirim ke API
             },
-            rawHeatmap: this.analytics.heatmapData // Data mentah (x,y,t)
+            rawHeatmap: this.analytics.heatmapData 
         };
+        
 
-            this.mediapipe.destroy()
-            this.scene.launch('Result', { score: this.score, scoop: this.scoop, gameSceneKey: this.scene.key, report: analyticsReport, win: isWin})
-        }
+
+        this.mediapipe.destroy()
+        this.scene.launch('Result', { score: this.score, scoop: this.scoop, gameSceneKey: this.scene.key, report: analyticsReport, win: isWin})
+    }
+
+
     
     onMediaPipeResults(results) {
-
         if (!this.gameReady) return;
 
-        //              Analytics               //
+        // --- OPTIMASI THROTTLING ---
+        const now = Date.now();
+        if (now - this.lastAiUpdate < this.aiUpdateInterval) {
+            return; // Skip frame ini kalau kecepetan
+        }
+        this.lastAiUpdate = now;
+        // ---------------------------
+
         this.analytics.totalFrames++;
-        //              ---------               //
 
         if (!this.sys || !this.sys.game) return;
         const { width, height } = this.sys.game.config;
 
         if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
-
             const wrist1 = results.multiHandLandmarks[0][0];
             const wrist2 = results.multiHandLandmarks[1][0];
             this.targetConePos.x = ((wrist1.x + wrist2.x) / 2) * width;
@@ -483,7 +525,7 @@ export class BaseGameScene extends Phaser.Scene {
                 this.analytics.heatmapData.push({ 
                     x: handX, 
                     y: handY, 
-                    t: timestamp,
+                    t: timestamp, 
                     hand: handLabel
                 })
             })
