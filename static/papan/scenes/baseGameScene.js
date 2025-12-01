@@ -493,7 +493,7 @@ export class BaseGameScene extends Phaser.Scene {
         }
 
         // 4. Keseimbangan (Average Waktu di Papan)
-        let avgBalanceTime = 0;
+        let skorKeseimbangan = 0;
         if (this.analytics.balanceTimes.length > 0) {
             const sumBalance = this.analytics.balanceTimes.reduce((a, b) => a + b, 0);
             const avgBalanceTime = sumBalance / this.analytics.balanceTimes.length;
@@ -502,7 +502,7 @@ export class BaseGameScene extends Phaser.Scene {
             // Kalau rata-rata dia 5396ms, nilainya jadi (5396/15000)*100 = 35.9
             const TARGET_TIME_MS = 7000; 
             
-            avgBalanceTime = Math.min(100, (avgBalanceTime / TARGET_TIME_MS) * 100);
+            skorKeseimbangan = Math.min(100, (avgBalanceTime / TARGET_TIME_MS) * 100);
         }
 
         const muridId = this.registry.get('currentMuridId') || "guest";
@@ -519,7 +519,7 @@ export class BaseGameScene extends Phaser.Scene {
                 fokus: skorFokus.toFixed(1),
                 koordinasi: skorKoordinasi.toFixed(1),
                 waktuReaksi: null,
-                keseimbangan: avgBalanceTime.toFixed(0)
+                keseimbangan: skorKeseimbangan.toFixed(0)
             },
             rawHeatmap: this.analytics.heatmapData
         };
