@@ -7,9 +7,9 @@ export default class Game extends Phaser.Scene {
       this.camera = null
       this.bubbles = []
       this.lives = 0
-      
+
       this.gameState = 'TUTORIAL'
-      
+
       this.maxLives = 3
       this.handEffect = {}
 
@@ -25,9 +25,13 @@ export default class Game extends Phaser.Scene {
       this.maxBubbleCount = 1;
       this.bubbleTypes = ['blue', 'purple'];
       this.baseSpeed = 1.0;
-      
+
       // Variable untuk tween score
       this.scoreFillTween = null;
+
+      // --- OPTIMASI: Variabel untuk membatasi FPS AI ---
+      this.lastAiUpdate = 0;
+      this.aiUpdateInterval = 50; // Update AI setiap 50ms (sekitar 20 FPS) - Semakin besar angka ini, semakin ringan gamenya
    }
 
    init(data) {
@@ -56,7 +60,7 @@ export default class Game extends Phaser.Scene {
          case 3:
             this.remainingTime = 80;
             this.maxBubbleCount = 3;
-            this.bubbleTypes = ['blue', 'purple', 'bomb', 'blue', 'bomb']; 
+            this.bubbleTypes = ['blue', 'purple', 'bomb', 'blue', 'bomb'];
             this.baseSpeed = 1.2;
             break;
          default:
@@ -89,10 +93,10 @@ export default class Game extends Phaser.Scene {
             bgGameplay.stop();
          }
 
-         bgGameplay = this.sound.add('bgGameplay', { 
+         bgGameplay = this.sound.add('bgGameplay', {
             loop: true
          });
-         
+
          if (bgGameplay) {
             bgGameplay.play();
             this.registry.set('bgGameplay', bgGameplay);
@@ -103,15 +107,18 @@ export default class Game extends Phaser.Scene {
       if (bgGameplay) {
          bgGameplay.mute = !isMusicOn;
       }
-      
+
+      // --- INITIALIZE ANALYTICS ---
       this.analytics = {
-         gameStartTime: this.time.now, 
-         totalFrames: 0,   
-         handLossFrames: 0, 
-         heatmapData: [],   
+         gameStartTime: this.time.now,
+         totalFrames: 0,
+         handLossFrames: 0,
+         heatmapData: [],
          reactionTimes: [],
          missedBubbles: 0,
-         handSpeeds: [],
+         
+         // TAMBAHAN UNTUK KETANGKASAN
+         handSpeeds: [], 
          lastPopData: null 
       };
 
@@ -121,7 +128,7 @@ export default class Game extends Phaser.Scene {
       this.handEffectGroup = this.physics.add.group();
 
       //    Mediapipe Manager    //
-      this.videoElement = document.getElementById('webcam') 
+      this.videoElement = document.getElementById('webcam')
       this.mediapipe = new MediaPipeManager(this.videoElement, this.onMediaPipeResults.bind(this))
 
       //    Busa Air    //
@@ -146,14 +153,13 @@ export default class Game extends Phaser.Scene {
       this.TimerText = this.add.text(width - 425, 130, `Waktu: ${this.remainingTime} detik`, {
             fontFamily: 'LilitaOne',
             fontSize: '46px',
-            fill: '#045170' 
+            fill: '#045170'
       })
 
       //    Score Panel   //
       this.scoreFillImage = this.add.image(width - 165, 820, 'scoreFill').setScale(0.3)
-      // *** MODIFIKASI: Inisialisasi posisi persentase fill untuk animasi ***
-      this.scoreFillImage.displayedPerc = 0; 
-      
+      this.scoreFillImage.displayedPerc = 0;
+
       this.add.image(width - 180, 620, 'scorePanel').setScale(0.64)
 
       this.scoreFillImage.setOrigin(0.5, 1.0);
@@ -161,10 +167,10 @@ export default class Game extends Phaser.Scene {
       this.scoreText = this.add.text(width - 170, 320, `00`, {
             fontFamily: 'LilitaOne',
             fontSize: '84px',
-            fill: '#045170' 
+            fill: '#045170'
       }).setOrigin(0.5);
 
-      this.updateScoreUI() // Panggil sekali untuk set posisi awal
+      this.updateScoreUI() 
 
       this.pauseButton = this.add.image(170, 900, 'pauseButton')
       .setScale(0.47)
@@ -202,11 +208,11 @@ export default class Game extends Phaser.Scene {
       });
 
       this.physics.add.overlap(
-         this.handEffectGroup, 
-         this.bubbleGroup, 
+         this.handEffectGroup,
+         this.bubbleGroup,
          this.popBubble,
-         null,            
-         this          
+         null,
+         this
       );
 
       this.showTutorial()
@@ -220,16 +226,16 @@ export default class Game extends Phaser.Scene {
       this.bubbleGroup.getChildren().forEach(bubble => {
 
          const isOutOfScreen = (
-            bubble.x < -150 || 
-            bubble.x > this.scale.width + 150 || 
-            bubble.y < -150 || 
+            bubble.x < -150 ||
+            bubble.x > this.scale.width + 150 ||
+            bubble.y < -150 ||
             bubble.y > this.scale.height + 150
          );
 
          if (isOutOfScreen) {
             const type = bubble.getData('type');
-            
-            if (type !== 'bomb') { 
+
+            if (type !== 'bomb') {
                this.score -= 100;
                this.updateScoreUI();
                if (this.selectedLevel > 1) {
@@ -239,7 +245,7 @@ export default class Game extends Phaser.Scene {
             }
             bubble.destroy();
          }
-      }); 
+      });
    }
 
    updateTimer() {
@@ -256,18 +262,17 @@ export default class Game extends Phaser.Scene {
       }
    }
 
-   // *** MODIFIKASI: Method updateScoreUI dengan Tween Animasi ***
    updateScoreUI() {
       if (this.score < 0) this.score = 0;
-      
+
       const poppedBubbleCount = this.analytics.reactionTimes.length;
       this.scoreText.setText(poppedBubbleCount.toString().padStart(2, '0'));
 
       if (this.scoreFillImage) {
-         
+
          const star1_VisualY = 0.5;
          const star2_VisualY = 0.7;
-         const slowZoneVisualCap = 0.80; 
+         const slowZoneVisualCap = 0.80;
 
          const scoreStar1 = 800;
          const scoreStar2 = 1400;
@@ -278,8 +283,8 @@ export default class Game extends Phaser.Scene {
          let t = 0;
 
          if (this.score >= scoreJump) {
-            targetPercentage = 1.0; 
-         } 
+            targetPercentage = 1.0;
+         }
          else if (this.score <= scoreStar1) {
             t = this.score / scoreStar1;
             targetPercentage = Phaser.Math.Linear(0, star1_VisualY, t);
@@ -292,9 +297,9 @@ export default class Game extends Phaser.Scene {
             t = (this.score - scoreStar2) / (scoreJump - scoreStar2);
             targetPercentage = Phaser.Math.Linear(star2_VisualY, slowZoneVisualCap, t);
          }
-         
+
          targetPercentage = Phaser.Math.Clamp(targetPercentage, 0, 1);
-         
+
          // Jalankan Tween Animasi pada Fill
          if (this.scoreFillTween) {
             this.scoreFillTween.stop();
@@ -311,20 +316,20 @@ export default class Game extends Phaser.Scene {
                const currentPerc = this.scoreFillImage.displayedPerc;
                const originalHeight = this.scoreFillImage.texture.getSourceImage().height;
                const originalWidth = this.scoreFillImage.texture.getSourceImage().width;
-               
+
                const cropHeight = originalHeight * currentPerc;
                const cropY = originalHeight - cropHeight;
 
                this.scoreFillImage.setCrop(
-                  0, 
-                  cropY,   
+                  0,
+                  cropY,
                   originalWidth,
-                  cropHeight   
+                  cropHeight
                );
             }
          });
       }
-      
+
       if (this.score >= this.maxScore && this.gameState === 'PLAYING') {
          this.checkGameEnd();
       }
@@ -346,7 +351,7 @@ export default class Game extends Phaser.Scene {
 
       const tutorialImg = this.add.image(width / 2, height / 2, tutorialImageKey)
          .setOrigin(0.5);
-      
+
       const tutorialBtn = this.add.image(width / 2, height * 0.8, 'startButton')
          .setOrigin(0.5)
          .setInteractive();
@@ -362,54 +367,48 @@ export default class Game extends Phaser.Scene {
                volume: 1.25
             })
          }
-         
+
       });
    }
 
-   // *** MODIFIKASI: Animasi Countdown 3-2-1 yang lebih menarik ***
    startCountdown() {
       this.gameState = 'COUNTDOWN';
       const { width, height } = this.sys.game.config;
 
-      // Variable untuk menyimpan sprite countdown yang sedang aktif
       let currentCountSprite = null;
 
-      // Fungsi helper untuk animasi angka
       const showCount = (textureKey, delay) => {
          this.time.delayedCall(delay, () => {
-            
-            // Hapus angka sebelumnya jika ada
+
             if (currentCountSprite) {
                currentCountSprite.destroy();
             }
 
-            // Buat angka baru
             currentCountSprite = this.add.image(width / 2, height / 2, textureKey)
                .setOrigin(0.5)
-               .setScale(0); // Mulai dari kecil (0)
+               .setScale(0); 
 
-            // Mainkan tween pop-up
             this.tweens.add({
                targets: currentCountSprite,
-               scale: 1, // Membesar ke ukuran normal
+               scale: 1, 
                duration: 600,
-               ease: 'Back.out' // Efek membal sedikit
+               ease: 'Back.out' 
             });
          });
       };
 
-      // Jadwalkan animasi
       showCount('three', 0);
       showCount('two', 1000);
       showCount('one', 2000);
 
-      // Selesai countdown
       this.time.delayedCall(3000, () => {
          if (currentCountSprite) {
             currentCountSprite.destroy();
          }
          this.analytics.gameStartTime = this.time.now;
+         // Set waktu awal juga untuk ketangkasan (biar hitungan pertama valid)
          this.analytics.lastPopData = { x: width/2, y: height/2, time: this.time.now };
+         
          this.startGame();
       });
    }
@@ -450,9 +449,8 @@ export default class Game extends Phaser.Scene {
          if (bubbleTweens) {
             bubbleTweens.forEach(tween => tween.pause());
          }
-      });  
+      });
 
-      // Pause juga tween animasi score jika sedang jalan
       if(this.scoreFillTween && this.scoreFillTween.isPlaying()) {
          this.scoreFillTween.pause();
       }
@@ -473,9 +471,9 @@ export default class Game extends Phaser.Scene {
       this.pauseContainer.add(overlay);
       const panel = this.add.image(width / 2, height / 2, 'pauseMenu').setScale(0.45);
       this.pauseContainer.add(panel);
-      
-      const buttonY = height / 2 + 80; 
-      const buttonGap = 180; 
+
+      const buttonY = height / 2 + 80;
+      const buttonGap = 180;
       const numButtons = 3;
       const totalButtonWidth = (numButtons - 1) * buttonGap;
       let buttonX = (width / 2) - (totalButtonWidth / 2);
@@ -488,7 +486,7 @@ export default class Game extends Phaser.Scene {
             }
             this.resumeGame()
          });
-      
+
       resumeBtn.on('pointerover', () => {
          this.tweens.add({
             targets: resumeBtn,
@@ -522,9 +520,9 @@ export default class Game extends Phaser.Scene {
                this.sound.play('sfxMenuButtonClick')
             }
             this.stopAllSounds();
-            this.scene.start('MainMenu'); 
+            this.scene.start('MainMenu');
          });
-      
+
       homeBtn.on('pointerover', () => {
          this.tweens.add({
             targets: homeBtn,
@@ -536,7 +534,7 @@ export default class Game extends Phaser.Scene {
          if (this.registry.get('isSfxOn') === true) {
             this.sound.play('sfxMenuButtonHover')
          }
-         
+
       });
 
       homeBtn.on('pointerout', () => {
@@ -590,7 +588,7 @@ export default class Game extends Phaser.Scene {
       if (this.gameState !== 'PAUSED') {
          return;
       }
-      
+
       this.gameState = 'PLAYING';
 
       this.pauseButton.setVisible(true);
@@ -628,10 +626,10 @@ export default class Game extends Phaser.Scene {
          return;
       }
 
-      this.lives++; 
+      this.lives++;
 
       const iconIndexToHide = this.maxLives - this.lives;
-      
+
       if (this.lifeIcons[iconIndexToHide]) {
          this.lifeIcons[iconIndexToHide].setVisible(false);
       }
@@ -653,56 +651,53 @@ export default class Game extends Phaser.Scene {
       }
    }
 
-   finishLevel(isWin) { 
-      if (this.gameState !== 'PLAYING') return; 
+   finishLevel(isWin) {
+      if (this.gameState !== 'PLAYING') return;
       this.gameState = 'GAMEOVER';
 
       if (this.countdownEvent) this.countdownEvent.remove(false);
       if (this.bubbleSpawnEvent) this.bubbleSpawnEvent.remove(false);
-      
+
       this.bubbleGroup.getChildren().forEach(bubble => {
          this.tweens.killTweensOf(bubble);
          if (bubble.body) bubble.body.stop();
       });
-      
+
       if(this.scoreFillTween) this.scoreFillTween.stop();
 
       this.handEffectGroup.clear(true, true);
       Object.keys(this.handEffect).forEach(label => {
-         delete this.handEffect[label]; 
+         delete this.handEffect[label];
       });
 
       const totalPlayTimeMs = this.time.now - this.analytics.gameStartTime;
 
       // --- HITUNG METRIK ---
 
-      // 1. Fokus (Persentase tangan terlihat)
+      // 1. Fokus
       let skorFokus = 0;
       if (this.analytics.totalFrames > 0) {
          skorFokus = ((this.analytics.totalFrames - this.analytics.handLossFrames) / this.analytics.totalFrames) * 100;
       }
 
-      // 2. Waktu Reaksi (Rata-rata)
+      // 2. Waktu Reaksi
       let avgReactionTime = 0;
-      const reactionTimes = this.analytics.reactionTimes;
-
-      if (reactionTimes.length > 0) {
-         const totalReactionTime = reactionTimes.reduce((acc, time) => acc + time, 0);
-         avgReactionTime = totalReactionTime / reactionTimes.length;
+      if (this.analytics.reactionTimes.length > 0) {
+         const sumReaction = this.analytics.reactionTimes.reduce((a, b) => a + b, 0);
+         avgReactionTime = sumReaction / this.analytics.reactionTimes.length;
       }
 
-      // 3. Koordinasi (Akurasi Pecah Gelembung)
-      const poppedCount = reactionTimes.length;
-      const missedCount = this.analytics.missedBubbles;
-      const totalInteraction = poppedCount + missedCount;
-      
+      // 3. Koordinasi
+      const totalInteraction = this.analytics.reactionTimes.length + this.analytics.missedBubbles;
       let skorKoordinasi = 0;
       if (totalInteraction > 0) {
-         skorKoordinasi = (poppedCount / totalInteraction) * 100;
+         skorKoordinasi = (this.analytics.reactionTimes.length / totalInteraction) * 100;
       } else {
          skorKoordinasi = isWin ? 100 : 0;
       }
 
+      // 4. KETANGKASAN (AGILITY) -- BARU
+      // Menghitung rata-rata kecepatan tangan antar bubble
       let skorKetangkasan = 0;
       if (this.analytics.handSpeeds.length > 0) {
          const sumSpeed = this.analytics.handSpeeds.reduce((a, b) => a + b, 0);
@@ -715,12 +710,11 @@ export default class Game extends Phaser.Scene {
          skorKetangkasan = Math.min(100, (avgSpeed / TARGET_SPEED) * 100);
       }
 
-      // --- AMBIL ID MURID DARI REGISTRY ---
       const muridId = this.registry.get('currentMuridId');
 
       const analyticsReport = {
          id_profil: muridId || "guest_unknown",
-         id_games_dashboard: 1, // ID untuk Game Gelembung
+         id_games_dashboard: 1, 
          level: `level${this.selectedLevel}`,
          finalScore: this.score,
          win: isWin,
@@ -729,18 +723,16 @@ export default class Game extends Phaser.Scene {
              fokus: skorFokus.toFixed(1),
              koordinasi: skorKoordinasi.toFixed(1),
              waktuReaksi: avgReactionTime.toFixed(0),
-             ketangkasan: skorKetangkasan.toFixed(1)
+             ketangkasan: skorKetangkasan.toFixed(1) // Masukkan skor ketangkasan
          },
          rawHeatmap: this.analytics.heatmapData
       };
-      
+
       console.log("LAPORAN ANALITIK BARU:", analyticsReport);
 
       if (this.score >= this.starThresholds.one) {
           this.sendAnalyticsToAPI(analyticsReport);
-      } else {
-          console.log("Skor belum mencapai bintang 1, data tidak dikirim ke API.");
-      }
+      } 
 
       this.scene.launch('Result', {
          isWin: isWin,
@@ -752,35 +744,37 @@ export default class Game extends Phaser.Scene {
    }
 
    async sendAnalyticsToAPI(data) {
-        const apiEndpoint = `${API_BASE_URL}/v1/analytics/save`; 
-
-        console.log('Mengirim data ke API...', data);
-
+        const apiEndpoint = `${API_BASE_URL}/v1/analytics/save`;
         try {
             const response = await fetch(apiEndpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`);
-            }
-
-            const result = await response.json();
-            console.log('API Sukses:', result);
-
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            console.log('API Sukses');
         } catch (error) {
             console.error('API Gagal Nembak:', error);
         }
     }
 
+   // --- OPTIMASI: Throttling AI Update ---
    onMediaPipeResults(results) {
+      // Cek state game
       if (this.gameState !== 'PLAYING' || !this.sys?.game) {
          return;
       }
+
+      // Cek waktu sekarang
+      const now = Date.now();
+      
+      // Jika belum waktunya update (misal belum 50ms berlalu), skip frame ini
+      if (now - this.lastAiUpdate < this.aiUpdateInterval) {
+         return; 
+      }
+      
+      // Reset waktu terakhir update
+      this.lastAiUpdate = now;
 
       this.analytics.totalFrames++;
 
@@ -789,13 +783,13 @@ export default class Game extends Phaser.Scene {
       const handsDetectedThisFrame = {};
 
       if (results.multiHandLandmarks && results.multiHandedness) {
-         
+
          const timestamp = this.time.now - this.analytics.gameStartTime;
 
          results.multiHandLandmarks.forEach((landmarks, i) => {
-            
+
             const handInfo = results.multiHandedness[i];
-            
+
             if (!handInfo || !handInfo.label) return;
             const label = handInfo.label;
             handsDetectedThisFrame[label] = true;
@@ -803,7 +797,7 @@ export default class Game extends Phaser.Scene {
             const palm = landmarks[9];
             if (!palm) return;
 
-            this.analytics.heatmapData.push({ 
+            this.analytics.heatmapData.push({
                x: palm.x,
                y: palm.y,
                t: timestamp,
@@ -812,20 +806,25 @@ export default class Game extends Phaser.Scene {
 
             const x = palm.x * width;
             const y = palm.y * height;
-            
+
+            // --- OPTIMASI: Update Fisika di dalam onMediaPipeResults masih oke asal tidak terlalu berat ---
+            // Tapi lebih baik lagi kalau hanya update posisi variabel, lalu apply fisika di update()
+            // Untuk sekarang, kita pertahankan logic ini tapi dengan frekuensi lebih rendah (Throttling)
+
             if (!this.handEffect[label]) {
                const effect = this.physics.add.sprite(x, y, 'efekAirAnimasi')
                   .setScale(0.25)
                   .setOrigin(0.5)
                   .play('airEffectPlay');
-               
+
                effect.body.setAllowGravity(false);
                this.handEffectGroup.add(effect);
-               
+
                this.handEffect[label] = effect;
 
             } else {
                const eff = this.handEffect[label];
+               // Gunakan tween atau lerp untuk pergerakan yang lebih halus meski FPS AI rendah
                eff.x += (x - eff.x) / 2;
                eff.y += (y - eff.y) / 2;
             }
@@ -834,12 +833,12 @@ export default class Game extends Phaser.Scene {
       } else {
          this.analytics.handLossFrames++;
       }
-      
+
       Object.keys(this.handEffect).forEach(label => {
-         
+
          if (!handsDetectedThisFrame[label]) {
-            this.handEffect[label].destroy(); 
-            delete this.handEffect[label]; 
+            this.handEffect[label].destroy();
+            delete this.handEffect[label];
          }
       });
 
@@ -911,7 +910,7 @@ export default class Game extends Phaser.Scene {
             if (bubble.active) {
                if (type !== 'bomb' && !bubble.getData('popping')) {
                   if (this.selectedLevel > 1) {
-                     this.loseLife(); 
+                     this.loseLife();
                   }
                }
                bubble.destroy();
@@ -927,17 +926,37 @@ export default class Game extends Phaser.Scene {
 
       const popX = bubble.x;
       const popY = bubble.y;
+      const now = this.time.now;
 
       const type = bubble.getData('type');
 
+      // --- LOGIC KETANGKASAN (AGILITY) ---
+      // Hitung kecepatan tangan dari pop sebelumnya ke pop sekarang
+      if (type !== 'bomb') {
+         if (this.analytics.lastPopData) {
+            const lastData = this.analytics.lastPopData;
+            
+            // Jarak antara bubble terakhir dan bubble ini
+            const distance = Phaser.Math.Distance.Between(lastData.x, lastData.y, popX, popY);
+            
+            // Waktu tempuh (ms)
+            const timeDiff = now - lastData.time;
+
+            if (timeDiff > 0) {
+               // Kecepatan = Jarak / Waktu (Pixel per MS)
+               const speed = distance / timeDiff;
+               this.analytics.handSpeeds.push(speed);
+            }
+         }
+
+         // Update data pop terakhir untuk perhitungan selanjutnya
+         this.analytics.lastPopData = { x: popX, y: popY, time: now };
+      }
+
       if (type !== 'bomb' && !bubble.getData('popping')) {
-         
-         const spawnTime = bubble.getData('spawnTime'); 
-
-         const reactionTimeMs = this.time.now - spawnTime;
-
+         const spawnTime = bubble.getData('spawnTime');
+         const reactionTimeMs = now - spawnTime;
          this.analytics.reactionTimes.push(reactionTimeMs);
-
       }
 
       bubble.setData('popping', true);
@@ -945,7 +964,7 @@ export default class Game extends Phaser.Scene {
       bubble.body.setEnable(false);
       let textScorePopUp = '+100'
 
-      if (type === 'bomb'){ 
+      if (type === 'bomb'){
          if (this.registry.get('isSfxOn') === true) {
             this.sound.play('sfxBomPop')
          }
@@ -987,7 +1006,7 @@ export default class Game extends Phaser.Scene {
       bubble.on('animationcomplete', () => {
          bubble.destroy();
       });
-   }  
+   }
 
    stopAllSounds() {
       const gameMusic = this.registry.get('bgGame');
