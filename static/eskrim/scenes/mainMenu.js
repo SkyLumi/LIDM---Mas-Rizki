@@ -1,5 +1,5 @@
 import FaceMeshManager from './faceMeshManager.js';
-import { API_BASE_URL }  from '../../config.js';
+import { API_BASE_URL, DASHBOARD_BASE_URL }  from '../../config.js';
 
 export class MainMenu extends Phaser.Scene {
     constructor() {
