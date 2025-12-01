@@ -728,7 +728,8 @@ export default class Game extends Phaser.Scene {
          metrics: {
              fokus: skorFokus.toFixed(1),
              koordinasi: skorKoordinasi.toFixed(1),
-             waktuReaksi: avgReactionTime.toFixed(0) 
+             waktuReaksi: avgReactionTime.toFixed(0),
+             ketangkasan: skorKetangkasan.toFixed(1)
          },
          rawHeatmap: this.analytics.heatmapData
       };
