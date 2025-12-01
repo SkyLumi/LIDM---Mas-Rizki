@@ -110,7 +110,9 @@ export default class Game extends Phaser.Scene {
          handLossFrames: 0, 
          heatmapData: [],   
          reactionTimes: [],
-         missedBubbles: 0
+         missedBubbles: 0,
+         handSpeeds: [],
+         lastPopData: null 
       };
 
       //    Bubble Group      //
@@ -407,6 +409,7 @@ export default class Game extends Phaser.Scene {
             currentCountSprite.destroy();
          }
          this.analytics.gameStartTime = this.time.now;
+         this.analytics.lastPopData = { x: width/2, y: height/2, time: this.time.now };
          this.startGame();
       });
    }
@@ -698,6 +701,18 @@ export default class Game extends Phaser.Scene {
          skorKoordinasi = (poppedCount / totalInteraction) * 100;
       } else {
          skorKoordinasi = isWin ? 100 : 0;
+      }
+
+      let skorKetangkasan = 0;
+      if (this.analytics.handSpeeds.length > 0) {
+         const sumSpeed = this.analytics.handSpeeds.reduce((a, b) => a + b, 0);
+         const avgSpeed = sumSpeed / this.analytics.handSpeeds.length; // pixel per ms
+
+         // TARGET KECEPATAN:
+         // Anggaplah kecepatan "Jago" adalah 1.5 pixel/ms (berpindah 1500px dalam 1 detik)
+         // Jika avgSpeed >= 1.5, maka skor 100
+         const TARGET_SPEED = 1.5; 
+         skorKetangkasan = Math.min(100, (avgSpeed / TARGET_SPEED) * 100);
       }
 
       // --- AMBIL ID MURID DARI REGISTRY ---
