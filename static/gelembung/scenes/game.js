@@ -778,7 +778,7 @@ export default class Game extends Phaser.Scene {
 
       const handsDetectedThisFrame = {};
 
-      if (results.multiHandLandmarks && results.multiHandedness) {
+      if (results.multiHandLandmarks && results.multiHandedness && results.multiHandLandmarks.length > 0) {
 
          const timestamp = this.time.now - this.analytics.gameStartTime;
 

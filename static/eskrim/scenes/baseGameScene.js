@@ -456,8 +456,7 @@ export class BaseGameScene extends Phaser.Scene {
             const sumSpeed = this.analytics.handSpeeds.reduce((a, b) => a + b, 0);
             const avgSpeed = sumSpeed / this.analytics.handSpeeds.length; // Pixel per ms
             
-            // Target Speed (Misal: 1.2px/ms itu cepet)
-            const TARGET_SPEED = 0.3; 
+            const TARGET_SPEED = 0.05; 
             skorKetangkasan = Math.min(100, (avgSpeed / TARGET_SPEED) * 100);
         }
 
