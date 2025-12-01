@@ -341,12 +341,10 @@ def calculate_period_stats(id_profil, start_date, end_date):
 @guru_required
 def get_full_report(id_profil):
     """
-    Satu API untuk semua kebutuhan Report:
-    1. Overall Bulan Ini (Untuk SkillCard & Tab Overall)
-    2. Breakdown Minggu 1-4 (Untuk Tab Mingguan)
+    API Report dengan Filter Bulan & Tahun
     """
     try:
-        # Validasi Profil & Akses Guru
+        # Validasi Profil & Akses Guru (Tetap sama)
         profil_murid = db.session.get(Profil, id_profil)
         if not profil_murid: return jsonify({"status": "gagal", "message": "Murid tidak ditemukan"}), 404
         
@@ -355,33 +353,50 @@ def get_full_report(id_profil):
         if not profil_guru or profil_murid.id_sekolah != profil_guru.id_sekolah:
             return jsonify({"status": "gagal", "message": "Akses ditolak"}), 403
 
-        # Tentukan Bulan Ini
-        today = datetime.date.today()
-        month_start = today.replace(day=1)
+        # === LOGIC BARU: TANGKAP FILTER DARI FRONTEND ===
+        req_month = request.args.get('month', type=int)
+        req_year = request.args.get('year', type=int)
+
+        # Default ke Hari Ini
+        target_date = datetime.date.today()
+
+        # Kalau Frontend kirim filter, pakai tanggal dari filter
+        if req_month and req_year:
+            try:
+                target_date = datetime.date(req_year, req_month, 1)
+            except ValueError:
+                # Fallback kalau tanggal ga valid
+                target_date = datetime.date.today()
+
+        # Tentukan Start & End Date berdasarkan target_date
+        month_start = target_date.replace(day=1)
         
         # Hitung Akhir Bulan
-        if today.month == 12:
-            next_month = today.replace(year=today.year+1, month=1, day=1)
+        if month_start.month == 12:
+            next_month = month_start.replace(year=month_start.year+1, month=1, day=1)
         else:
-            next_month = today.replace(month=today.month+1, day=1)
+            next_month = month_start.replace(month=month_start.month+1, day=1)
         month_end = next_month - datetime.timedelta(days=1)
 
         report_data = {}
 
-        # 1. OVERALL (1 Bulan Penuh)
-        # Ini dipake buat SkillCard utama DAN Tab "Keseluruhan" di Detail Card
+        # 1. OVERALL (1 Bulan Penuh sesuai filter)
         report_data['overall'] = calculate_period_stats(id_profil, month_start, month_end)
 
-        # 2. BREAKDOWN (Minggu 1 - 4)
-        # Asumsi: Minggu dihitung per 7 hari dari tanggal 1
+        # 2. BREAKDOWN (Minggu 1 - 4 relatif terhadap bulan yang dipilih)
         for i in range(4):
             week_start = month_start + datetime.timedelta(days=i*7)
             week_end = week_start + datetime.timedelta(days=6)
             
-            if week_start > month_end: break
+            # Potong kalau lewat bulan
+            if week_start > month_end: 
+                # Kalau minggu ke-4 lewat bulan, kirim data kosong
+                report_data[f"week{i+1}"] = calculate_period_stats(id_profil, week_start, week_start) # Range 0 hari (kosong)
+                continue 
+
             if week_end > month_end: week_end = month_end
 
-            key = f"week{i+1}" # week1, week2, week3, week4
+            key = f"week{i+1}"
             report_data[key] = calculate_period_stats(id_profil, week_start, week_end)
 
         return jsonify({
