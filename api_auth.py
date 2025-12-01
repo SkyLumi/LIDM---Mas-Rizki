@@ -109,8 +109,8 @@ def guru_register():
     kata_sandi = data.get('kata_sandi')
     id_sekolah = data.get('id_sekolah')
     
-    user = db.session.scalar(db.select(Pengguna).where(Pengguna.email == email))
-    if user:
+    cek_user = db.session.scalar(db.select(Pengguna).where(Pengguna.email == email))
+    if cek_user:
          return jsonify({"status": "gagal", "message": "Email sudah terdaftar"}), 400
 
     hashed_password = generate_password_hash(kata_sandi, method='pbkdf2:sha256')
@@ -118,10 +118,12 @@ def guru_register():
     try:
         role_guru = db.session.scalar(db.select(Role).where(Role.nama_role == 'Guru'))
         if not role_guru:
-            return jsonify({"status": "gagal", "message": "Role Guru tidak ditemukan"}),  # 2 = Guru
+            return jsonify({"status": "gagal", "message": "Role Guru tidak ditemukan"}), 404
+
         new_user = Pengguna(email=email, password=hashed_password, id_role=role_guru.id_role)
         db.session.add(new_user)
-        db.session.commit()
+        
+        db.session.flush() 
         
         new_profil = Profil(
             id_pengguna=new_user.id_pengguna,
@@ -129,14 +131,16 @@ def guru_register():
             id_sekolah=id_sekolah
         )
         db.session.add(new_profil)
+        
         db.session.commit()
         
         print(f"GURU BARU DIDAFTARKAN: {email}")
         return jsonify({"status": "sukses", "message": "Guru berhasil terdaftar"}), 201
         
     except Exception as e:
+        db.session.rollback() # Rollback biar gak ada data 'yatim'
         print(f"Gagal daftar guru: {e}")
-        return jsonify({"status": "gagal", "message": "Terjadi kesalahan"}), 500
+        return jsonify({"status": "gagal", "message": "Terjadi kesalahan saat mendaftar"}), 500
 
 
 @auth_bp.route('/guru/login', methods=['POST'])
