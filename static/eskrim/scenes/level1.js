@@ -1,26 +1,33 @@
-import { BaseGameScene } from './baseGameScene.js';
+import { BaseGameScene } from './baseGameScene.js'
 
 export class Level1 extends BaseGameScene {
-
     constructor() {
-        super('Level1');
+        super('Level1')
     }
 
-    /** SETUP AWAL KHUSUS LEVEL 1 */
-    createLevelLogic() {
-        // Konfigurasi Level 1
-        this.targetItems = 3;  // Butuh 3 item untuk menang penuh
-        this.currentLives = 3; // Reset nyawa
-        
-        // Posisi Keranjang Statis untuk Level 1
-        // (Pastikan posisi ini mudah dijangkau)
-        const { width, height } = this.sys.game.config;
-        this.basket.setPosition(width - 200, height - 120);
-    }
+    create() {
+        super.create() 
 
-    /** UPDATE LOOP KHUSUS LEVEL 1 */
-    updateLevelLogic(time, delta) {
-        // Level 1: Keranjang TIDAK BERGERAK.
-        // Jadi fungsi ini dibiarkan kosong.
+        this.gameTimeRemaining = 90;
+        this.maxScore = 2000;
+        this.timerText.setText(this.formatTime(this.gameTimeRemaining));
+
+        this.gameTimer = this.time.addEvent({
+            delay: 1000,
+            callback: this.updateTimer,
+            callbackScope: this,
+            loop: true,
+            paused: true
+        });
+
+        this.spawnTimer = this.time.addEvent({
+            delay: 2500,
+            callback: this.jatuhinEsKrim,
+            callbackScope: this,
+            loop: true,
+            paused: true
+        });
+
+       this.showTutorialOverlay('tutorial_level1')
     }
 }
