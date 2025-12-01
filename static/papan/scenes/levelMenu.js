@@ -145,6 +145,10 @@ export class LevelMenu extends Phaser.Scene {
 
             // Click Action
             button.on('pointerdown', () => {
+                const menuMusic = this.sound.get('bgMainMenu');
+                if (menuMusic) {
+                    menuMusic.stop();
+                }
                 // if (this.registry.get('isSfxOn')) this.sound.play('sfxLevelButtonClick');
                 this.scene.start(`Level${levelNumber}`);
             });

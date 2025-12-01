@@ -71,6 +71,21 @@ export class BaseGameScene extends Phaser.Scene {
         this.events.off('shutdown');
         this.events.on('shutdown', this.shutdown, this);
 
+        const isMusicOn = this.registry.get('isMusicOn');
+
+        if (!this.sound.get('bgGameplay')) {
+             this.bgMusic = this.sound.add('bgGameplay', {
+                loop: true,
+                volume: 0.5
+            });
+        } else {
+            this.bgMusic = this.sound.get('bgGameplay');
+        }
+
+        if (isMusicOn && !this.bgMusic.isPlaying) {
+            this.bgMusic.play();
+        }
+
         const { width, height } = this.sys.game.config;
         this.spawnMaxX = width - 300;
         this.targetPlankPos = { x: width/2, y: height/2, angle: 0 };
@@ -496,10 +511,11 @@ export class BaseGameScene extends Phaser.Scene {
         let skorKeseimbangan = 0;
         if (this.analytics.balanceTimes.length > 0) {
             const sumBalance = this.analytics.balanceTimes.reduce((a, b) => a + b, 0);
-            const avgBalanceTime = sumBalance / this.analytics.balanceTimes.length;
+            
+            // Ganti nama variabel perhitungan mentah agar tidak bentrok
+            // Ini adalah rata-rata dalam milidetik (misal: 5396 ms)
+            const rawAverageMs = sumBalance / this.analytics.balanceTimes.length;
 
-            // TENTUKAN TARGET: Misal 15 Detik (15000ms) = Nilai 100
-            // Kalau rata-rata dia 5396ms, nilainya jadi (5396/15000)*100 = 35.9
             const TARGET_TIME_MS = 7000; 
             
             skorKeseimbangan = Math.min(100, (avgBalanceTime / TARGET_TIME_MS) * 100);
@@ -551,7 +567,6 @@ export class BaseGameScene extends Phaser.Scene {
         if (stars > 3) stars = 3;
         if (stars < 1) stars = 1; 
 
-        // Generate Report
         const report = this.calculateAnalytics();
 
         this.scene.launch('Result', { 
@@ -565,6 +580,10 @@ export class BaseGameScene extends Phaser.Scene {
     }
 
     shutdown() {
+        if (this.bgMusic) {
+            this.bgMusic.stop();
+            this.bgMusic.destroy();
+        }
         this.cleanup();
     }
 
