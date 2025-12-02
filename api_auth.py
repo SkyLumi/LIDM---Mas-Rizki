@@ -429,7 +429,7 @@ def guru_get_murid_list():
                 "email": email,
                 "disability": nama_hambatan if nama_hambatan else "-",
                 "image": "",
-                "password": "jangandiliatbang"
+                "password": ""
             })
             
         return jsonify(list_murid), 200
