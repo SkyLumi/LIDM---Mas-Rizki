@@ -275,86 +275,76 @@ def guru_tambah_murid():
 
 @auth_bp.route('/guru/murid/<int:id_profil>', methods=['PUT'])
 @guru_required 
-def guru_update_murid(id_profil):
+def update_murid(id_profil):
     """
-    API (HANYA GURU) untuk MENG-UPDATE data 'Pemain' / 'Murid'.
-    (Ini "ditembak" pas Guru nge-klik 'Simpan' di form edit)
+    Update data murid (Profil & Akun Login)
     """
-    
     try:
-        # --- 1. CARI MURID & GURU-NYA ---
-        profil_murid = db.session.get(Profil, id_profil)
-        if not profil_murid:
-            return jsonify({"status": "gagal", "message": "Murid tidak ditemukan."}), 404
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "gagal", "message": "Tidak ada data dikirim"}), 400
 
-        guru_id_pengguna = session.get('user_id')
-        profil_guru = db.session.scalar(
-            db.select(Profil).where(Profil.id_pengguna == guru_id_pengguna)
-        )
-        
-        # --- 2. JURUS KEAMANAN (PENTING!) ---
-        # (Guru dari "SLB A" gak boleh ngedit murid "SLB B")
-        if not profil_guru or profil_murid.id_sekolah != profil_guru.id_sekolah:
-            return jsonify({"status": "gagal", "message": "Akses ditolak. Anda tidak berhak mengedit murid ini."}), 403
+        # 1. Cari Data Profil Murid
+        profil = db.session.get(Profil, id_profil)
+        if not profil:
+            return jsonify({"status": "gagal", "message": "Murid tidak ditemukan"}), 404
 
-        # --- 3. AMBIL DATA BARU DARI FORM ---
-        data = request.json
-        
-        # --- 4. UPDATE "PROFIL" (Data Gampang) ---
-        # (Kita pake .get() biar "opsional", kalo gak diisi, gak berubah)
+        # 2. Cari Data Akun Pengguna (untuk email & password)
+        user = db.session.get(Pengguna, profil.id_pengguna)
+        if not user:
+            return jsonify({"status": "gagal", "message": "Akun pengguna tidak ditemukan"}), 404
+
+        # --- UPDATE TABEL PROFIL ---
         if 'nama_lengkap' in data:
-            profil_murid.nama_lengkap = data.get('nama_lengkap')
-        if 'nomor_absen' in data:
-            profil_murid.kelas = int(data.get('nomor_absen'))
-        if 'id_hambatan' in data:
-            profil_murid.id_hambatan = int(data.get('id_hambatan'))
-
-        # --- 5. UPDATE "PENGGUNA" (Data Susah: Email/Pass) ---
-        user_murid = db.session.get(Pengguna, profil_murid.id_pengguna)
+            profil.nama_lengkap = data['nama_lengkap']
         
-        # A. Cek Email (Kalo "niat" diubah)
-        if 'email' in data:
-            new_email = data.get('email') or None 
-            if new_email and new_email != user_murid.email:
-                # Kalo email-nya BARU, cek duplikat
-                user_exists = db.session.scalar(db.select(Pengguna).where(Pengguna.email == new_email))
-                if user_exists:
-                    return jsonify({"status": "gagal", "message": "Email baru tersebut sudah terdaftar."}), 400
-            user_murid.email = new_email
+        if 'kelas' in data:
+            profil.kelas = data['kelas']
             
-        # B. Cek Password (Kalo "niat" diubah)
-        if 'password' in data and data.get('password'): # Cek kalo diisi (bukan string kosong)
-            new_pass = data.get('password')
-            user_murid.password = generate_password_hash(new_pass, method='pbkdf2:sha256')
+        if 'jenis_kendala' in data:
+            # Pastikan nama kolom di DB abang sesuai (misal: 'kebutuhan_khusus' atau 'jenis_kendala')
+            profil.jenis_kendala = data['jenis_kendala'] 
+            
+        if 'foto_profil' in data:
+            profil.foto_profil = data['foto_profil']
 
-        # --- 6. UPDATE FOTO WAJAH (Kalo "niat" diubah) ---
-        if 'image_base64' in data and data.get('image_base64'):
-            image_base64 = data.get('image_base64')
-            face_encoding = image_base64_to_encoding(image_base64)
-            
-            if face_encoding is not None:
-                # (Timpa file .npy yang lama)
-                filename = f"profil_{profil_murid.id_profil}.npy"
-                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                np.save(file_path, face_encoding)
-                
-                profil_murid.face_id = file_path # (Pastikan path-nya ke-update)
-                print(f"Berhasil UPDATE face encoding untuk: {profil_murid.nama_lengkap}")
-            else:
-                print(f"Warning: Wajah murid {profil_murid.nama_lengkap} di-update, tapi tidak terdeteksi.")
+
+        # --- UPDATE TABEL PENGGUNA (EMAIL & PASSWORD) ---
         
+        # Update Email (Cek duplikat dulu kalau diganti)
+        if 'email' in data and data['email']:
+            new_email = data['email'].strip()
+            if new_email != user.email:
+                cek_email = db.session.scalar(db.select(Pengguna).where(Pengguna.email == new_email))
+                if cek_email:
+                    return jsonify({"status": "gagal", "message": "Email sudah digunakan oleh siswa lain"}), 400
+                user.email = new_email
+
+        # Update Password (Hanya jika dikirim)
+        if 'kata_sandi' in data and data['kata_sandi']:
+            password_baru = data['kata_sandi']
+            if len(password_baru) < 6: # Validasi sederhana
+                return jsonify({"status": "gagal", "message": "Password minimal 6 karakter"}), 400
+            user.password = generate_password_hash(password_baru, method='pbkdf2:sha256')
+
+        # Simpan Perubahan
         db.session.commit()
-        
-        print(f"GURU ({profil_guru.nama_lengkap}) berhasil MENG-UPDATE MURID: {profil_murid.nama_lengkap}")
+
         return jsonify({
             "status": "sukses", 
-            "message": "Murid berhasil diupdate"
+            "message": "Data murid berhasil diperbarui",
+            "data": {
+                "id": profil.id_profil,
+                "nama": profil.nama_lengkap,
+                "kelas": profil.kelas,
+                "image": profil.foto_profil
+            }
         }), 200
 
     except Exception as e:
         db.session.rollback()
-        print(f"Gagal update murid: {e}")
-        return jsonify({"status": "gagal", "message": "Terjadi kesalahan"}), 500
+        print(f"Error update murid: {e}")
+        return jsonify({"status": "gagal", "message": "Terjadi kesalahan server"}), 500
     
 @auth_bp.route('/guru/murid/<int:id_profil>', methods=['GET'])
 @guru_required
